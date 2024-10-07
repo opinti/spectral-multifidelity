@@ -1,9 +1,8 @@
-# This file contains utility functions for graph construction and manipulation.
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
-from typing import Callable, Union
 from sklearn.decomposition import PCA
 from sklearn.neighbors import kneighbors_graph
+from typing import Callable, Union
 
 
 class GraphCore:
@@ -15,7 +14,7 @@ class GraphCore:
     def __init__(
         self,
         data: np.ndarray,
-        metric: Union[str, Callable],
+        metric: Union[str, Callable] = "euclidean",
         dist_space: str = "ambient",
         n_components: int = None,
         method: str = "full",
@@ -27,33 +26,25 @@ class GraphCore:
         q: float = None,
     ):
         """
-        GraphCore class includes methods to compute representations of a graph, such as adjacency and normalized
-        graph Laplacian matrix of a graph.
-
-        Methods:
-        - compute_adjacency: Compute the adjacency matrix of the graph.
-        - compute_graph_laplacian: Compute the normalized graph Laplacian of the graph
+        GraphCore class includes methods to compute representations of a graph,
+        such as the adjacency matrix and normalized graph Laplacian.
 
         Parameters:
         - data (numpy.ndarray): The data matrix of shape (n_samples, n_features).
-        - metric (str or None): Metric to measure samples similarity. Default is 'euclidean'.
-        - dist_space (str): The space where the distances are computed. Options are ['ambient', 'pod'].
-            Default is 'ambient'.
-        - n_components (int): Number of POD components to compute distance. Required if dist_space is 'pod'.
-        - method (str): Method used to compute the adjacency matrix. Can be 'full' or 'k-nn'. Default is 'full'.
-        - k_nn (int): Number of nearest neighbors to use if method is 'k-nn'. Default is None.
-        - scale (float or None): Correlation scale parameter for adjacency computation.
-            If None, adjacency is computed in 'self_tuning' mode.
-        - k_adj (int): Parameter for self-tuning adjacency. Default is 7.
-        - kernel_fn (Callable): Kernel function to compute adjacency. Default is Gaussian kernel.
+        - metric (Union[str, Callable]): Metric to measure sample similarity. Default is 'euclidean'.
+        - dist_space (str): Space where distances are computed. Options are ['ambient', 'pod']. Default is 'ambient'.
+        - n_components (int): Number of components for POD. Required if dist_space is 'pod'.
+        - method (str): Method used to compute the adjacency matrix ('full' or 'k-nn'). Default is 'full'.
+        - k_nn (int): Number of nearest neighbors for 'k-nn' method. Default is None.
+        - corr_scale (float or None): Scale parameter for adjacency computation.
+        - k_adj (int): Self-tuning adjacency parameter. Default is 7.
+        - kernel_fn (Callable): Kernel function for adjacency computation. Default is Gaussian.
         - p (float): Left exponent for graph Laplacian normalization. Default is 0.5.
         - q (float): Right exponent for graph Laplacian normalization. Default is 0.5.
         """
 
         if data.ndim != 2:
-            raise ValueError(
-                f"Data matrix must be 2-dimensional, got shape {data.shape}."
-            )
+            raise ValueError(f"Data matrix must be 2D, got shape {data.shape}.")
 
         self.data = data
         self.metric = metric
@@ -62,10 +53,10 @@ class GraphCore:
         self.method = method
         self.k_nn = k_nn
         self.corr_scale = corr_scale
-        self.k_adj = k_adj
-        self.kernel_fn = kernel_fn
-        self.p = p
-        self.q = q
+        self.k_adj = k_adj or self.DEFAULT_K_ADJ
+        self.kernel_fn = kernel_fn or self._gaussian_kernel
+        self.p = p or self.DEFAULT_P
+        self.q = q or self.DEFAULT_Q
 
         self._validate_params()
 
@@ -81,49 +72,33 @@ class GraphCore:
 
     def compute_adjacency(self) -> np.ndarray:
         """
-        Computes the adjacency matrix for the graph of the input data.
+        Compute the adjacency matrix for the graph.
 
         Returns:
-        - numpy.ndarray: Adjacency matrix.
+        - np.ndarray: The adjacency matrix.
         """
-        # Transform the input data based on dist_space (POD/PCA or ambient)
         transformed_data = self._transform_data()
-        # Compute distance matrix based on metric and method
         distance_matrix = self._compute_distance_matrix(transformed_data)
-        # Scale distance matrix
         scaled_distance_matrix = self._scale_distance_matrix(distance_matrix)
-        # Compute the final adjacency matrix
         adjacency_matrix = self._apply_kernel_fn(scaled_distance_matrix)
 
         return adjacency_matrix
 
     def compute_graph_laplacian(self, W: np.ndarray) -> np.ndarray:
         """
-        Calculate the normalized graph Laplacian of the graph.
+        Compute the normalized graph Laplacian matrix.
 
         L = D^p * (D - W) * D^q
 
         Parameters:
-        - W (numpy.ndarray): Adjacency matrix.
-        - p (float): Left exponent for normalization.
-        - q (float): Right exponent for normalization.
+        - W (np.ndarray): Adjacency matrix.
 
         Returns:
-        - numpy.ndarray: Normalized graph Laplacian matrix.
+        - np.ndarray: The normalized graph Laplacian.
         """
-        if self.p is None:
-            self.p = self.DEFAULT_P
-            self._log_warning(
-                f"Normalization exponent 'p' not provided. Using default value of {self.p}."
-            )
-        if self.q is None:
-            self.q = self.DEFAULT_Q
-            self._log_warning(
-                f"Normalization exponent 'q' not provided. Using default value of {self.q}."
-            )
         if not isinstance(self.p, (float, int)) or not isinstance(self.q, (float, int)):
             raise ValueError(
-                "Normalization exponents must be of type float or int. "
+                "Normalization exponents 'p' and 'q' must be float or int. "
                 f"Got {type(self.p)} and {type(self.q)} instead."
             )
 
@@ -145,71 +120,59 @@ class GraphCore:
 
     def _transform_data(self) -> np.ndarray:
         """
-        Transform the input data based on the specified distance space.
+        Transform input data based on the specified distance space.
 
         Returns:
-        - numpy.ndarray: Transformed data.
+        - np.ndarray: Transformed data.
         """
         if self.dist_space == "pod":
             return PCA(n_components=self.n_components).fit_transform(self.data)
-        elif self.dist_space == "ambient":
-            if self.n_components is not None:
-                self._log_warning(
-                    "When distance is computed in ambient space, variable 'n_components' is ignored."
-                )
-            return self.data
-        else:
-            raise ValueError(
-                f"Invalid dist_space. Expected one of ['ambient', 'pod']. Got {self.dist_space}."
-            )
+
+        if self.dist_space == "ambient" and self.n_components is not None:
+            self._log_warning("In 'ambient' space, 'n_components' is ignored.")
+
+        return self.data
 
     def _compute_distance_matrix(self, data: np.ndarray) -> np.ndarray:
         """
         Compute the distance matrix based on the specified method.
 
-        Parameters:
-        - data (numpy.ndarray): Input data matrix.
-
         Returns:
-        - numpy.ndarray: Distance matrix.
+        - np.ndarray: The distance matrix.
         """
-        if self.method == "full":  # full distance matrix
+        if self.method == "full":
             if self.k_nn is not None:
-                self._log_warning(
-                    "When 'method' is 'full', variable 'k_nn' will be ignored."
-                )
+                self._log_warning("'k_nn' is ignored when 'method' is 'full'.")
             return squareform(pdist(data, self.metric))
-        elif self.method == "k-nn":  # approximate distance matrix using k-nn
+
+        if self.method == "k-nn":
             if self.k_nn is None:
                 self.k_nn = int(self.DEFAULT_K_NN_RATIO * data.shape[0])
                 self._log_warning(
-                    f"Number of neighbors not provided. Using default value of"
-                    f"{self.DEFAULT_K_NN_RATIO * 100}% of n_samples = {self.k_nn}."
+                    f"'k_nn' not provided. Using default k_nn = {self.k_nn}."
                 )
             return self._knn_dist_matrix(data, self.k_nn, self.metric)
-        else:
-            raise ValueError(
-                f"Invalid method. Expected one of ['full', 'k-nn'], got {self.method}."
-            )
+
+        raise ValueError(f"Invalid method '{self.method}'. Expected 'full' or 'k-nn'.")
 
     def _knn_dist_matrix(
         self, data: np.ndarray, k: int, metric: Union[str, Callable]
     ) -> np.ndarray:
         """
-        Generate adjacency matrix using k-d tree.
+        Generate adjacency matrix using k-nearest neighbors.
 
         Parameters:
-        - data (numpy.ndarray): Input data matrix.
-        - k (int): Number of neighbors for adjacency computation.
+        - data (np.ndarray): Input data matrix.
+        - k (int): Number of nearest neighbors.
         - metric (Union[str, Callable]): Distance metric.
 
         Returns:
-        - numpy.ndarray: Adjacency matrix.
+        - np.ndarray: The adjacency matrix.
         """
         dist_matrix = kneighbors_graph(
             data, k, mode="distance", metric=metric
         ).toarray()
-        dist_matrix[dist_matrix == 0] = np.inf
+        dist_matrix[dist_matrix == 0] = np.inf  # Replace zero entries with infinity
         return dist_matrix
 
     def _scale_distance_matrix(self, dist_matrix: np.ndarray) -> np.ndarray:
@@ -222,39 +185,29 @@ class GraphCore:
         Returns:
         - numpy.ndarray: Scaled distance matrix.
         """
-        if self.corr_scale is None:  # self-tuning distance scaling
-            if (
-                self.k_adj is not None
-                and self.method == "k-nn"
-                and self.k_nn < self.k_adj
-            ):
+        if self.corr_scale is None:
+            if self.method == "k-nn" and self.k_nn < self.k_adj:
                 raise ValueError(
                     "Number of neighbors for self-tuning adjacency 'k_adj' must be less than 'k_nn'."
                 )
             return self._self_tuned_scaling(dist_matrix, self.k_adj)
-        else:  # fixed scaling
+        else:
             return dist_matrix / self.corr_scale
 
     def _self_tuned_scaling(self, dist_matrix: np.ndarray, k: int) -> np.ndarray:
         """
-        Self-tuned scaling of distance matrix.
+        Apply self-tuned scaling to the distance matrix.
 
         Parameters:
-        - dist_matrix (numpy.ndarray): Pairwise distance matrix of the input data.
-        - k (int): correlation scale for each sample is equal to its distance with the k-th neighbor.
+        - dist_matrix (np.ndarray): Distance matrix.
+        - k (int): The k-th neighbor to determine the scale for each sample.
 
         Returns:
-        - numpy.ndarray: Self-tuned scaled distance matrix.
+        - np.ndarray: Self-tuned scaled distance matrix.
         """
-        if k is None:
-            k = self.DEFAULT_K_ADJ
-            self._log_warning(
-                f"Number of neighbors not provided. Using default value of k_adj = {k}."
-            )
         if k > dist_matrix.shape[0]:
             raise ValueError(
-                f"Number of neighbors k must be less than 'n_nodes'. "
-                f"Got k = {k} with n_nodes = {dist_matrix.shape[0]}."
+                f"'k_adj' must be less than number of samples. Got k = {k}."
             )
 
         scales = np.sqrt(np.sort(dist_matrix, axis=1)[:, k - 1])
@@ -262,23 +215,18 @@ class GraphCore:
 
     def _apply_kernel_fn(self, scaled_dist_matrix: np.ndarray) -> np.ndarray:
         """
-        Compute the adjacency matrix by applying a kernel to the scaled distance matrix.
-
-        Parameters:
-        - scaled_dist_matrix (numpy.ndarray): Scaled distance matrix.
+        Apply the kernel function to the scaled distance matrix to compute the adjacency matrix.
 
         Returns:
-        - numpy.ndarray: Adjacency matrix.
+        - np.ndarray: Adjacency matrix.
         """
-        if self.kernel_fn is None:
-            self.kernel_fn = self._gaussian_kernel
         adj = self.kernel_fn(scaled_dist_matrix)
-        np.fill_diagonal(adj, 0)  # Enforce diagonal elements to be zero
+        np.fill_diagonal(adj, 0)  # Enforce zero diagonal for adjacency matrix
         return adj
 
     def _validate_params(self):
         """
-        Check the graph configuration.
+        Validate the input parameters.
         """
         if self.dist_space == "pod" and self.n_components is None:
             raise ValueError(
@@ -290,25 +238,18 @@ class GraphCore:
             )
 
         if self.k_nn is not None and not isinstance(self.k_nn, int):
-            raise ValueError(
-                f"Number of neighbors for 'k-nn' method must be an integer. Got {self.k_nn}."
-            )
+            raise ValueError(f"'k_nn' must be an integer. Got {self.k_nn}.")
 
-        if self.corr_scale is not None and not isinstance(
-            self.corr_scale, (float, int)
-        ):
-            raise ValueError(
-                f"Scale must be None or a float or int. Got {self.corr_scale}."
-            )
-        if isinstance(self.corr_scale, (float, int)):
-            if self.corr_scale <= 0:
+        if self.corr_scale is not None:
+            if not isinstance(self.corr_scale, (float, int)) or self.corr_scale <= 0:
                 raise ValueError(
-                    f"Scale must be None or a positive float or int. Got {self.corr_scale}."
+                    f"Scale must be a positive float or int. Got {self.corr_scale}."
                 )
             if self.k_adj is not None:
                 self._log_warning(
                     "When 'corr_scale' is provided, 'k_adj' will be ignored."
                 )
-        if self.corr_scale is None:
-            if not isinstance(self.k_adj, int) or self.k_adj <= 0:
-                raise ValueError(f"k_adj must be a positive integer. Got {self.k_adj}.")
+        if not isinstance(self.k_adj, int) or self.k_adj <= 0:
+            raise ValueError(f"k_adj must be a positive integer. Got {self.k_adj}.")
+        if not callable(self.kernel_fn):
+            raise ValueError("Kernel function must be callable.")
