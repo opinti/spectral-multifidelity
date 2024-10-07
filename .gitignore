@@ -1,4 +1,4 @@
 /data
 /_data
-__pycache__/
+specmf/__pycache__/
 *.pyc
