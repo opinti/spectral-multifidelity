@@ -3,3 +3,4 @@ data/.DS_Store
 specmf/__pycache__/
 _data/
 data/
+.DS_Store
