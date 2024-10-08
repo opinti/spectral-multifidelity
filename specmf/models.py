@@ -118,7 +118,7 @@ class MultiFidelityModel:
         """
         assert g_LF.nodes.shape[1] == x_HF.shape[1], "Dimension mismatch."
 
-        if inds_train is None and self.ind_centroids is None:
+        if inds_train is None and self.inds_centroids is None:
             raise ValueError(
                 "Indices that map the high-to-low-fidelity data must be provided."
             )
