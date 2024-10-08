@@ -36,6 +36,8 @@ def test_graph_init(graph_instance):
     assert graph.n_nodes == 10
     assert graph.n_dim == 2
     assert isinstance(graph.adjacency, np.ndarray)
+    assert isinstance(graph.graph_laplacian, np.ndarray)
+    assert graph.adjacency.shape == (10, 10)
 
 
 def test_graph_laplacian(graph_instance):
@@ -111,7 +113,7 @@ def test_model_transform_inds_train_mismatch(
     graph = graph_instance
     model = model_instance
 
-    inds_train = [0, 1]  # Mismatch: two indices, but three HF points
+    inds_train = [0, 1]  # Mismatch: two indices, but 10 HF points
 
     with pytest.raises(
         ValueError,
