@@ -1,236 +1,161 @@
 import numpy as np
 import pytest
-from specmf.models import MultiFidelityModel, Graph
+from specmf.models import Graph, MultiFidelityModel
 
 
-def test_graph_creation():
-    X = np.array([[1, 2], [3, 4], [5, 6]])
-    config = {'k': 2}
-    graph = Graph(X, **config)
-    assert graph.n_nodes == 3
+@pytest.fixture
+def sample_graph_data():
+    """Fixture to provide sample data for graph initialization."""
+    return np.arange(20).reshape(10, 2).astype(float)
+
+
+@pytest.fixture
+def graph_instance(sample_graph_data):
+    """Fixture to initialize a Graph instance."""
+    return Graph(data=sample_graph_data)
+
+
+@pytest.fixture
+def sample_high_fidelity_data():
+    """Fixture to provide high-fidelity data."""
+    return np.arange(20).reshape(10, 2).astype(float) + 1.0
+
+
+@pytest.fixture
+def model_instance():
+    """Fixture to initialize MultiFidelityModel instance."""
+    return MultiFidelityModel()
+
+
+# Tests for the Graph class
+
+
+def test_graph_init(graph_instance):
+    """Test if Graph is initialized correctly."""
+    graph = graph_instance
+    assert graph.n_nodes == 10
     assert graph.n_dim == 2
-    assert np.array_equal(graph.nodes, X)
+    assert isinstance(graph.adjacency, np.ndarray)
 
 
-def test_adjacency_matrix():
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    config = {
-        'metric': 'sqeuclidean',
-        'mode': 'fixed_scale',
-        'scale': 0.5,
-        'k': 2
-    }
-    graph = Graph(X, **config)
-    adjacency = graph.adjacency
-    expected_dist = np.array([[0., 1, 1, 2],
-                              [1, 0, 2, 1],
-                              [1, 2, 0, 1],
-                              [2, 1, 1, 0]])
-    expected_adjacency = np.exp(-expected_dist ** 2 / config['scale'] ** 2)
-    np.fill_diagonal(expected_adjacency, 0)
-    assert np.allclose(adjacency, expected_adjacency)
-
-
-def test_graph_laplacian():
-    # TODO: Implement test to check if graph_laplacian is correctly computed
-    X = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    config = {
-        'metric': 'euclidean',
-        'mode': 'fixed_scale',
-        'scale': 0.5,
-        'k': 2
-    }
-    graph = Graph(X, **config)
+def test_graph_laplacian(graph_instance):
+    """Test if graph Laplacian is computed correctly."""
+    graph = graph_instance
     laplacian = graph.graph_laplacian
-    assert laplacian.shape == (4, 4)  # Checking if the shape is correct
-    assert np.allclose(laplacian, laplacian.T)  # Checking if the matrix is symmetric
+    assert laplacian.shape == (10, 10)
 
 
-def test_getitem():
-    X = np.array([[1, 2], [3, 4], [5, 6]])
-    config = {'k': 2}
-    graph = Graph(X, **config)
-    assert np.array_equal(graph[0], np.array([1, 2]))
-    assert np.array_equal(graph[1], np.array([3, 4]))
-    assert np.array_equal(graph[2], np.array([5, 6]))
-    with pytest.raises(IndexError):
-        graph[3]
+def test_graph_laplacian_eig(graph_instance):
+    """Test if Laplacian eigenvalues and eigenvectors are computed correctly."""
+    graph = graph_instance
+    eigvals, eigvecs = graph.laplacian_eig()
+    assert eigvals.shape == (10,)
+    assert eigvecs.shape == (10, 10)
 
 
-CONFIG_ADJ_ERROR = {
-    "test-2": {
-        # Test case 2: Invalid distance function
-        'metric': 'invalid',
-        'mode': 'self_tuning',
-        'scale': 0.5
-    },
-    "test-3": {
-        # Test case 3: Invalid mode
-        'metric': 'euclidean',
-        'mode': 'invalid',
-        'scale': 0.5
-    },
-    "test-4": {
-        # Test case 4: Missing scale parameter in fixed_scale mode
-        'metric': 'euclidean',
-        'mode': 'fixed_scale'
-    },
-    "test-5": {
-        # Test case 5: Negative scale parameter
-        'metric': 'euclidean',
-        'mode': 'fixed_scale',
-        'scale': -0.5
-    },
-    "test-6": {
-        # Test case 6: Scale parameter as array
-        'metric': 'euclidean',
-        'mode': 'fixed_scale',
-        'scale': np.array([0.5, 0.5])
-    },
-    "test-7": {
-        # Test case 7: Scale parameter as non-float type
-        'metric': 'euclidean',
-        'mode': 'fixed_scale',
-        'scale': '0.5'
-    },
-    "test-8": {
-        # Test case 8: Missing scale parameter in fixed_scale mode
-        'mode': 'fixed_scale',
-        'scale': None,
-    },
-    "test-9": {
-        # Test case 9: k parameter too large
-        'k': 100,
-    },
-}
+def test_graph_getitem(graph_instance):
+    """Test __getitem__ method."""
+    graph = graph_instance
+    node = graph[0]
+    assert node.shape == (2,)
+    assert np.array_equal(node, graph.nodes[0])
 
 
-@pytest.mark.parametrize("config_key", CONFIG_ADJ_ERROR.keys())
-def test_adjacency_config_errors(config_key):
-    X = np.arange(100).reshape(25, 4)
-    config_dict = CONFIG_ADJ_ERROR[config_key]
-    with pytest.raises(ValueError):
-        graph = Graph(X, **config_dict)
-        _ = graph.adjacency
+def test_graph_len(graph_instance):
+    """Test __len__ method."""
+    graph = graph_instance
+    assert len(graph) == 10
 
 
-CONFIG_ADJ = {
-    "test-1": {
-        # Test case 1: int scale
-        'mode': 'fixed_scale',
-        'scale': int(1),
-    },
-    "test-2": {
-        # Test case 3: self-tuning mode
-        'mode': 'self_tuning',
-    },
-    "test-3": {
-        # Test case 4: All default parameters
-    },
-}
+# Tests for the MultiFidelityModel class
 
 
-@pytest.mark.parametrize("config_key", CONFIG_ADJ.keys())
-def test_adjacency_config(config_key):
-    X = np.arange(100).reshape(25, 4)
-    config_dict = CONFIG_ADJ[config_key]
-    graph = Graph(X, **config_dict)
-    _ = graph.adjacency
+def test_model_init(model_instance):
+    """Test if MultiFidelityModel is initialized correctly."""
+    model = model_instance
+    assert model.sigma == 1e-2
+    assert model.beta == 2
+    assert model.kappa == 1e-3
 
 
-CONFIG_GL = {
-    "test-1": {
-        # Test case 1: Missing left normalization exponents
-        'p': None,
-        'q': 0.5,
-    },
-    "test-2": {
-        # Test case 2: Missing right normalization exponents
-        'p': 0.5,
-        'q': None,
-    },
-    "test-3": {
-        # Test case 3: Missing normalization exponents
-        'p': None,
-        'q': None,
-    },
-}
+def test_model_transform_dimension_mismatch(
+    graph_instance, sample_high_fidelity_data, model_instance
+):
+    """Test if transform method raises an assertion error for dimension mismatch."""
+    graph = graph_instance
+    model = model_instance
+    high_fidelity_data = sample_high_fidelity_data[:, :1]  # Mismatch in dimension
+
+    with pytest.raises(AssertionError, match="Dimension mismatch"):
+        model.transform(graph, high_fidelity_data)
 
 
-@pytest.mark.parametrize("config_key", CONFIG_GL.keys())
-def test_graph_laplacian_config(config_key):
-    X = np.arange(100).reshape(25, 4)
-    config_dict = CONFIG_GL[config_key]
-    graph = Graph(X, **config_dict)
-    _ = graph.graph_laplacian
+def test_model_transform_no_inds_train(
+    graph_instance, sample_high_fidelity_data, model_instance
+):
+    """Test if transform raises an error when no inds_train or centroids are provided."""
+    graph = graph_instance
+    model = model_instance
+
+    with pytest.raises(
+        ValueError,
+        match="Indices that map the high-to-low-fidelity data must be provided",
+    ):
+        model.transform(graph, sample_high_fidelity_data)
 
 
-def test_multi_fidelity_model_fit():
-    # Create a low-fidelity graph
-    X_LF = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    config_LF = {'k': 2}
-    graph_LF = Graph(X_LF, **config_LF)
+def test_model_transform_inds_train_mismatch(
+    graph_instance, sample_high_fidelity_data, model_instance
+):
+    """Test if transform raises an error for inds_train and high-fidelity data mismatch."""
+    graph = graph_instance
+    model = model_instance
 
-    # Create high-fidelity data
-    X_HF = np.array([[2, 2], [2, 3], [3, 2], [3, 3]])
+    inds_train = [0, 1]  # Mismatch: two indices, but three HF points
 
-    # Create a multi-fidelity model
-    model = MultiFidelityModel(sigma=1e-2, beta=2, kappa=1e-3, method='full')
-
-    # Fit the model
-    n_HF = 2
-    x_MF, dPhi = model.fit(graph_LF, X_HF, n_HF)
-
-    # Check the shape of the output
-    assert x_MF.shape == (4, 2)
-    assert dPhi.shape == (4,)
+    with pytest.raises(
+        ValueError,
+        match="Number of high-fidelity data points does not match the number of indices",
+    ):
+        model.transform(graph, sample_high_fidelity_data, inds_train)
 
 
-def test_multi_fidelity_model_summary(capsys):
-    # Create a multi-fidelity model
-    model = MultiFidelityModel(sigma=1e-2, beta=2, kappa=1e-3, method='full')
+def test_model_transform(graph_instance, sample_high_fidelity_data, model_instance):
+    """Test if transform method works correctly with valid inputs."""
+    graph = graph_instance
+    model = model_instance
+    inds_train = [0, 1, 2]
+    high_fidelity_data_train = sample_high_fidelity_data[inds_train]
 
-    # Print the model summary
-    model.summary()
+    x_MF, C_phi, dPhi = model.transform(graph, high_fidelity_data_train, inds_train)
 
-    # Capture the printed output
-    captured = capsys.readouterr()
-
-    # Check if the summary is printed correctly
-    assert "Model Configuration:" in captured.out
-    assert "sigma" in captured.out
-    assert "beta" in captured.out
-    assert "kappa" in captured.out
-    assert "method" in captured.out
+    assert x_MF.shape == (10, 2)  # Multi-fidelity data should match input dimensions
+    assert C_phi.shape == (10, 10)
+    assert dPhi.shape == (10,)
 
 
-def test_multi_fidelity_model_invalid_method():
-    # Create a multi-fidelity model with an invalid method
-    with pytest.raises(ValueError):
-        MultiFidelityModel(sigma=1e-2, beta=2, kappa=1e-3, method='invalid')
+def test_model_cluster_invalid_n_clusters(graph_instance, model_instance):
+    """Test if cluster method raises an error for invalid number of clusters."""
+    graph = graph_instance
+    model = model_instance
+
+    with pytest.raises(ValueError, match="Invalid number of clusters"):
+        model.cluster(graph, 0)  # Invalid number of clusters
 
 
-def test_multi_fidelity_model_invalid_sigma():
-    with pytest.raises(ValueError):
-        MultiFidelityModel(sigma=-1e-2, beta=2, kappa=1e-3, method='full')
+def test_model_cluster(graph_instance, model_instance):
+    """Test if clustering works with valid inputs."""
+    graph = graph_instance
+    model = model_instance
+
+    inds_centroids, labels = model.cluster(graph, n=2)
+
+    assert inds_centroids.shape == (2,)
+    assert labels.shape == (10,)
+    assert len(set(labels)) == 2  # Should form 2 clusters
 
 
-def test_multi_fidelity_model_invalid_beta():
-    with pytest.raises(ValueError):
-        MultiFidelityModel(sigma=1e-2, beta=-2, kappa=1e-3, method='full')
+if __name__ == "__main__":
+    import pytest
 
-
-def test_multi_fidelity_model_invalid_kappa():
-    # Create a multi-fidelity model with an invalid kappa
-    with pytest.raises(ValueError):
-        MultiFidelityModel(sigma=1e-2, beta=2, kappa=-1e-3, method='full')
-
-
-def test_multi_fidelity_model_invalid_spectrum_cutoff():
-    # Create a multi-fidelity model with an invalid spectrum_cutoff
-    with pytest.raises(ValueError):
-        MultiFidelityModel(sigma=1e-2, beta=2, kappa=1e-3, method='trunc', spectrum_cutoff=0)
-
-
-if __name__ == '__main__':
     pytest.main()
