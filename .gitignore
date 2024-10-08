@@ -1,4 +1,2 @@
-/data
-/_data
-specmf/__pycache__/
-*.pyc
+
+.DS_Store
