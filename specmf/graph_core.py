@@ -3,6 +3,17 @@ from scipy.spatial.distance import pdist, squareform
 from sklearn.decomposition import PCA
 from sklearn.neighbors import kneighbors_graph
 from typing import Callable, Union
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
+
+class InvalidMethodError(ValueError):
+    """Custom exception for invalid method selection."""
+
+    pass
 
 
 class GraphCore:
@@ -42,7 +53,6 @@ class GraphCore:
         - p (float): Left exponent for graph Laplacian normalization. Default is 0.5.
         - q (float): Right exponent for graph Laplacian normalization. Default is 0.5.
         """
-
         if data.ndim != 2:
             raise ValueError(f"Data matrix must be 2D, got shape {data.shape}.")
 
@@ -53,17 +63,17 @@ class GraphCore:
         self.method = method
         self.k_nn = k_nn
         self.corr_scale = corr_scale
-        self.k_adj = k_adj or self.DEFAULT_K_ADJ
-        self.kernel_fn = kernel_fn or self._gaussian_kernel
-        self.p = p or self.DEFAULT_P
-        self.q = q or self.DEFAULT_Q
+        self.k_adj = k_adj if k_adj is not None else self.DEFAULT_K_ADJ
+        self.kernel_fn = kernel_fn if kernel_fn is not None else self._gaussian_kernel
+        self.p = p if p is not None else self.DEFAULT_P
+        self.q = q if q is not None else self.DEFAULT_Q
 
         self._validate_params()
 
     @staticmethod
     def _log_warning(message: str):
         """Log a warning message."""
-        print(f"UserWarning: {message}")
+        logger.warning(message)
 
     @staticmethod
     def _gaussian_kernel(dist_matrix: np.ndarray) -> np.ndarray:
@@ -108,18 +118,19 @@ class GraphCore:
         if self.p == 0 and self.q == 0:
             return D - W
 
-        Dp = np.diag(d ** (-self.p)) if self.p != 0 else None
-        Dq = np.diag(d ** (-self.q)) if self.q != 0 else None
+        D_p = np.diag(d ** (-self.p)) if self.p != 0 else None
+        D_q = np.diag(d ** (-self.q)) if self.q != 0 else None
 
-        if Dp is None:
-            return (D - W) @ Dq
-        if Dq is None:
-            return Dp @ (D - W)
+        if D_p is None:
+            return (D - W) @ D_q
+        if D_q is None:
+            return D_p @ (D - W)
 
-        return Dp @ (D - W) @ Dq
+        return D_p @ (D - W) @ D_q
 
     def _transform_data(self) -> np.ndarray:
         """
+
         Transform input data based on the specified distance space.
 
         Returns:
@@ -153,7 +164,9 @@ class GraphCore:
                 )
             return self._knn_dist_matrix(data, self.k_nn, self.metric)
 
-        raise ValueError(f"Invalid method '{self.method}'. Expected 'full' or 'k-nn'.")
+        raise InvalidMethodError(
+            f"Invalid method '{self.method}'. Expected 'full' or 'k-nn'."
+        )
 
     def _knn_dist_matrix(
         self, data: np.ndarray, k: int, metric: Union[str, Callable]
@@ -172,7 +185,7 @@ class GraphCore:
         dist_matrix = kneighbors_graph(
             data, k, mode="distance", metric=metric
         ).toarray()
-        dist_matrix[dist_matrix == 0] = np.inf  # Replace zero entries with infinity
+        dist_matrix[dist_matrix == 0] = np.inf
         return dist_matrix
 
     def _scale_distance_matrix(self, dist_matrix: np.ndarray) -> np.ndarray:
@@ -180,10 +193,10 @@ class GraphCore:
         Scale the distance matrix based on the specified correlation scale.
 
         Parameters:
-        - dist_matrix (numpy.ndarray): Distance matrix.
+        - dist_matrix (np.ndarray): Distance matrix.
 
         Returns:
-        - numpy.ndarray: Scaled distance matrix.
+        - np.ndarray: Scaled distance matrix.
         """
         if self.corr_scale is None:
             if self.method == "k-nn" and self.k_nn < self.k_adj:
@@ -207,7 +220,7 @@ class GraphCore:
         """
         if k > dist_matrix.shape[0]:
             raise ValueError(
-                f"'k_adj' must be less than number of samples. Got k = {k}."
+                f"'k_adj' must be less than the number of samples. Got k = {k}."
             )
 
         scales = np.sqrt(np.sort(dist_matrix, axis=1)[:, k - 1])
@@ -216,6 +229,9 @@ class GraphCore:
     def _apply_kernel_fn(self, scaled_dist_matrix: np.ndarray) -> np.ndarray:
         """
         Apply the kernel function to the scaled distance matrix to compute the adjacency matrix.
+
+        Parameters:
+        - scaled_dist_matrix (np.ndarray): Scaled distance matrix.
 
         Returns:
         - np.ndarray: Adjacency matrix.
@@ -232,6 +248,7 @@ class GraphCore:
             raise ValueError(
                 "Parameter 'n_components' must be provided if 'dist_space' is 'pod'."
             )
+
         if self.n_components is not None and not isinstance(self.n_components, int):
             raise ValueError(
                 f"Number of components must be an integer. Got {self.n_components} instead."
@@ -249,7 +266,9 @@ class GraphCore:
                 self._log_warning(
                     "When 'corr_scale' is provided, 'k_adj' will be ignored."
                 )
+
         if not isinstance(self.k_adj, int) or self.k_adj <= 0:
-            raise ValueError(f"k_adj must be a positive integer. Got {self.k_adj}.")
+            raise ValueError(f"'k_adj' must be a positive integer. Got {self.k_adj}.")
+
         if not callable(self.kernel_fn):
             raise ValueError("Kernel function must be callable.")
