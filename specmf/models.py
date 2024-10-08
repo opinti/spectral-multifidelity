@@ -236,7 +236,7 @@ class MultiFidelityModel:
         max_key_length = max(
             len(key) for key in self.__dict__ if key in self._contained_params
         )
-        divider = "=" * (max_key_length + 4)
+        divider = "=" * 3 * max_key_length
 
         print(divider)
         print("Model Configuration:")
