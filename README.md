@@ -1,6 +1,7 @@
-# Bayesian Spectral Multifidelity Library
+# Graph-Laplacian based Bayesian Spectral Multifidelity Library
 
-author: Orazio Pinti, PhD
+author: Orazio Pinti
+
 email:  orazio.pinti@gmail.com
 
 ## Overview
@@ -40,6 +41,8 @@ The project requires the following libraries:
 - `numpy`
 - `scipy`
 - `scikit-learn`
+- `scikit-optimize`
+- `umap-learn`
 - `matplotlib`
 
 Code has been tested with Python 3.12 or above.
@@ -56,7 +59,7 @@ from specmf import MultiFidelityModel, Graph
 
 ### Example Usage
 
-For examples on how to use please check the experiment notebooks.
+For end-to-end examples on how to use, please check the experiment notebooks.
 
 ## Project Structure
 
