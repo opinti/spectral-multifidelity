@@ -96,7 +96,7 @@ The `MultiFidelityModel` class is designed to perform multi-fidelity modeling.
 It allows you to transform all nodes of a graph based on a few more accurate nodes data.
 
 ```python
-mport numpy as np
+import numpy as np
 from specmf.models import Graph, MultiFidelityModel
 from specmf.plot import *
 
