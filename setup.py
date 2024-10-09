@@ -6,6 +6,7 @@ setup(
     version="0.1.0",
     description="Library to perform spectral multifidelity modeling",
     author="Orazio Pinti, orazio.pinti@gmail.com",
+    python_requires=">=3.12",
     install_requires=[
         "numpy==1.26.0",
         "matplotlib==3.8.0",
