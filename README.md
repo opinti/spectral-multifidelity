@@ -83,6 +83,6 @@ For any questions or issues, please reach out at orazio.pinti@gmail.com
 
 If you use this package in your research, please cite the following paper:
 
-**Paper Title**  
-Orazio Pinti et al.  
+**Graph Laplacian-based Bayesian Multi-fidelity Modelinge**  
+O. Pinti, J. M. Budd, F. Hoffmann, A. A. Oberai.
 [arXiv:2409.08211](https://arxiv.org/abs/2409.08211)
