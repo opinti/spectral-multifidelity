@@ -224,11 +224,13 @@ You also have uncertainty accosiated to each multi-fidelity esimate, which can b
 ```python
 # Plot the variance of multi-fidelity esimates
 fig, ax = plt.subplots(1, 1, figsize=(7.5, 6))
-scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var)
+scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var, s=50, vmin=0.025)
+ax.scatter(mf_data[inds_centroids, 0], mf_data[inds_centroids, 1], c='red', s=50, label='Training data')
 ax.set_title("Variance of multi-fidelity estimates", fontsize=16)
 ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 fig.colorbar(scatter, ax=ax,)
+ax.legend(loc="lower right", fontsize=14)
 ```
 
 ![Example-variance](figures/example-variance.png)
