@@ -1,9 +1,5 @@
 # Graph-Laplacian based Bayesian Spectral Multifidelity Library
 
-author: Orazio Pinti
-
-email:  orazio.pinti@gmail.com
-
 ## Overview
 
 A Python package for graph-laplacian based multi-fidelity modeling.
@@ -259,9 +255,9 @@ spectral-multifidelity/
 
 For any questions or issues, please reach out at orazio.pinti@gmail.com 
 
-## Citations
+## Reference
 
-If you use this package in your research, please cite the following paper:
+Source code of the paper: 
 
 **Graph Laplacian-based Bayesian Multi-fidelity Modelinge**  
 O. Pinti, J. M. Budd, F. Hoffmann, A. A. Oberai.
