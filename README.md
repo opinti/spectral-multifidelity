@@ -5,7 +5,9 @@ email:  orazio.pinti@gmail.com
 
 ## Overview
 
-A Python package for graph-laplacian based multi-fidelity modeling. 
+A Python package for graph-laplacian based multi-fidelity modeling.
+
+![Graphical Abstract](graphical-abstract/graphical-abstract.png)
 
 ## Features
 
