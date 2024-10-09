@@ -41,7 +41,7 @@ The project requires the following libraries:
 - `umap-learn`
 - `matplotlib`
 
-Code has been tested with Python 3.12 or above.
+The code has been tested with Python 3.12.
 
 ## Usage
 
