@@ -1,6 +1,6 @@
-.DS_Store
-data/.DS_Store
-specmf/__pycache__/
 _data/
 data/
+.vscode/
+.DS_Store
+specmf/__pycache__/
 tests/__pycache__/
