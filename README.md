@@ -1,26 +1,88 @@
-# Spectral Multifidelity Library
+# Bayesian Spectral Multifidelity Library
+
 author: Orazio Pinti, PhD
 email:  orazio.pinti@gmail.com
 
 ## Overview
-The spectral-multifidelity Library is used to perform multifidelity modeling via specMF method.
+
+A Python package for graph-laplacian based multi-fidelity modeling. 
+
+## Features
+
+- Performs multi-fidelity modeling using Bayesian specmf method
+- Defines simple Graph classe to store graphs and their representations
+- The method computations have a dedicated MultiFidelityModel class  
+- Utilities for preprocessing data for multi-fidelity modeling
+- Includes several experiments for testing the models
 
 ## Installation
 
-To install the Spectral Multifidelity Library, follow these steps:
+### Using `pip`
 
-1. Clone the repository: `git clone https://github.com/your-username/spectral-multifidelity.git`
-2. Navigate to the project directory: `cd spectral-multifidelity`
-3. Install the required dependencies: `pip install -r requirements.txt`
+You can install the package and its dependencies by running:
+
+```bash
+pip install .
+```
+
+For development mode:
+
+```bash
+pip install -e .
+```
+
+### Dependencies
+
+The project requires the following libraries:
+
+- `numpy`
+- `scipy`
+- `scikit-learn`
+- `matplotlib`
+
+Code has been tested with Python 3.12 or above.
 
 ## Usage
 
-To use the Spectral Multifidelity Library in your project, follow these steps:
+### Importing the package
 
-1. Import the library: `import spectral_multifidelity`
-2. Create an instance of the SpectralMultifidelity class: `model = spectral_multifidelity.SpectralMultifidelity()`
-3. Use the available functions and methods to perform spectral analysis and multifidelity modeling.
+Once installed, you can import the main module and start using the classes and functions provided by the package.
 
-## Examples
+```python
+from specmf import MultiFidelityModel, Graph
+```
 
-Here's an example of how to use the Spectral Multifidelity Library:
+### Example Usage
+
+For examples on how to use please check the experiment notebooks.
+
+## Project Structure
+
+```bash
+spectral-multifidelity/
+│
+├── data/                  # Contains datasets for experiments
+├── specmf/                # Main code
+│   ├── __init__.py        # Initialization file
+│   ├── models.py          # Contains model and graph classes
+│   ├── preprocess.py      # Data preprocessing utilities
+│   ├── graph_core.py      # Core graph class
+│   ├── utils.py           # Utility functions
+├── notebooks/             # Notebooks with experiments
+├── tests/                 # Unit tests
+├── setup.py               # Setup file for packaging
+├── requirements.txt       # List of dependencies
+└── README.md              # Project documentation (this file)
+```
+
+## Contact
+
+For any questions or issues, please reach out at orazio.pinti@gmail.com 
+
+## Citations
+
+If you use this package in your research, please cite the following paper:
+
+**Paper Title**  
+Orazio Pinti et al.  
+[arXiv:2409.08211](https://arxiv.org/abs/2409.08211)
