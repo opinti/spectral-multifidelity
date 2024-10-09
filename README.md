@@ -8,10 +8,10 @@ A Python package for graph-laplacian based multi-fidelity modeling.
 
 ## Features
 
-- Performs multi-fidelity modeling using Bayesian specmf method
-- Defines simple Graph classe to store graphs and their representations
-- The method computations have a dedicated MultiFidelityModel class  
-- Utilities for preprocessing data for multi-fidelity modeling
+- Perform multi-fidelity modeling using Bayesian specmf method
+- Simple `Graph` class to store graphs and their representations
+- Method computations happen in a dedicated `MultiFidelityModel` class  
+- Utilities for preprocessing and visualize data for multi-fidelity modeling
 - Includes several experiments for testing the models
 
 ## Installation
