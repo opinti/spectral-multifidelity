@@ -8,7 +8,7 @@ email:  orazio.pinti@gmail.com
 
 A Python package for graph-laplacian based multi-fidelity modeling.
 
-![Graphical Abstract](graphical-abstract/graphical-abstract.png)
+![Graphical Abstract](figures/graphical-abstract.png)
 
 ## Features
 
@@ -91,12 +91,14 @@ print(f"{graph_laplacian.shape=}")
 
 
 ### 2. Using the `MultiFidelityModel` class from `models.py`
+
 The `MultiFidelityModel` class is designed to perform multi-fidelity modeling. 
 It allows you to transform all nodes of a graph based on a few more accurate nodes data.
 
 ```python
-import numpy as np
+mport numpy as np
 from specmf.models import Graph, MultiFidelityModel
+from specmf.plot import *
 
 
 # Create some sample data
@@ -125,13 +127,13 @@ graph_lf = Graph(
 # Initialize the model
 model_config = {
     'sigma': 0.01,
-    'kappa': 0.1,
+    'kappa': 2,
     'method': 'full',
 }
 model = MultiFidelityModel(**model_config)
 
 # Transform the data
-mf_data, mf_var, dPhi = model.transform(
+mf_data, mf_covar_mat, mf_var = model.transform(
     graph_lf,
     hf_data,
     hf_inds,
@@ -157,9 +159,12 @@ ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ```
 
+![Example-1](figures/example-1.png)
+
+
 ### 3. Using the clustering functionalities to select high-fidelity data
 
-The `MultiFidelityModel` class also supports clustering operations. 
+The `MultiFidelityModel` class also supports spectral clustering operations. 
 Here's an example of clustering using the cluster method.
 
 ```python
@@ -174,16 +179,20 @@ ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ```
 
-This can be used to find the nodes where to acquire high-fidelity data. Based on the example above:
+![Example Clustering](figures/example-clustering.png)
+
+
+Clustering can be used to find the nodes where to acquire high-fidelity data:
 
 ```python
+# Aquire high-fidelity data at the centroids location
 hf_data = lf_data[inds_centroids, :] + 2
 
 # Transform the data
-mf_data, mf_var, dPhi = model.transform(
+mf_data, mf_covar_mat, mf_var = model.transform(
     graph_lf,
     hf_data,
-    hf_inds,
+    inds_centroids,
 )
 model.summary()
 
@@ -191,13 +200,13 @@ model.summary()
 # Plot the datasets
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 ax.scatter(lf_data[:, 0], lf_data[:, 1], color='orange', label='LF data')
-ax.scatter(lf_data[hf_inds, 0], lf_data[hf_inds, 1], color='blue', label='HF data')
+ax.scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1], color='blue', label='HF data')
 ax.scatter(mf_data[:, 0], mf_data[:, 1], color='green', label='MF data')
 ax.scatter(hf_data[:, 0], hf_data[:, 1], color='red')
-for i in range(len(hf_inds)):
+for i in range(len(inds_centroids)):
     ax.plot(
-        [lf_data[hf_inds[i], 0], hf_data[i, 0]],
-        [lf_data[hf_inds[i], 1], hf_data[i, 1]],
+        [lf_data[inds_centroids[i], 0], hf_data[i, 0]],
+        [lf_data[inds_centroids[i], 1], hf_data[i, 1]],
         color='grey',
         linewidth=1.,
         alpha=0.75,
@@ -206,6 +215,24 @@ ax.legend()
 ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ```
+
+![Example-2](figures/example-2.png)
+
+
+You also have uncertainty accosiated to each multi-fidelity esimate, which can be visualized in this simple 2-d example:
+
+```python
+# Plot the variance of multi-fidelity esimates
+fig, ax = plt.subplots(1, 1, figsize=(7.5, 6))
+scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var)
+ax.set_title("Variance of multi-fidelity estimates", fontsize=16)
+ax.set_xlabel(r"$u_1$", fontsize=16)
+ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
+fig.colorbar(scatter, ax=ax,)
+```
+
+![Example-variance](figures/example-variance.png)
+
 
 ## Project Structure
 
