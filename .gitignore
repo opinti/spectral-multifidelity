@@ -1,6 +1,4 @@
 _data/
-data/beam/*
-!data/beam/.gitkeep
 data/cavity/
 data/darcy/
 data/solid_inclusion/
@@ -9,3 +7,8 @@ data/solid_inclusion_qoi/
 .DS_Store
 specmf/__pycache__/
 tests/__pycache__/
+
+data/*
+!data/beam/
+data/beam/*
+!data/beam/.gitkeep
