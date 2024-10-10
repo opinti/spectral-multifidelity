@@ -1,5 +1,5 @@
 _data/
-data/beam/
+data/beam/*
 data/cavity/
 data/darcy/
 data/solid_inclusion/
