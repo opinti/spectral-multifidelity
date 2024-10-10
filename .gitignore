@@ -1,5 +1,9 @@
 _data/
-data/
+data/beam/
+data/cavity/
+data/darcy/
+data/solid_inclusion/
+data/solid_inclusion_qoi/
 .vscode/
 .DS_Store
 specmf/__pycache__/
