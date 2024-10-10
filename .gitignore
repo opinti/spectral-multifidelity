@@ -17,10 +17,6 @@ data/cavity/*
 data/darcy/*
 !data/darcy/.gitkeep
 
-!data/solid_inclusion/
-data/solid_inclusion/*
-!data/solid_inclusion/.gitkeep
-
 !data/solid_inclusion_qoi/
 data/solid_inclusion_qoi/*
 !data/solid_inclusion_qoi/.gitkeep
