@@ -139,9 +139,9 @@ model.summary()
 # Plot the datasets
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 ax.scatter(lf_data[:, 0], lf_data[:, 1], color='orange', label='LF data')
-ax.scatter(lf_data[hf_inds, 0], lf_data[hf_inds, 1], color='blue', label='HF data')
+ax.scatter(lf_data[hf_inds, 0], lf_data[hf_inds, 1], color='blue',)
 ax.scatter(mf_data[:, 0], mf_data[:, 1], color='green', label='MF data')
-ax.scatter(hf_data[:, 0], hf_data[:, 1], color='red')
+ax.scatter(hf_data[:, 0], hf_data[:, 1], color='red', label='HF data')
 for i in range(len(hf_inds)):
     ax.plot(
         [lf_data[hf_inds[i], 0], hf_data[i, 0]],
@@ -167,8 +167,9 @@ Here's an example of using the cluster method:
 # Perform clustering on the graph to find the high-fidelity indices
 inds_centroids, labels = model.cluster(graph_lf, n=n_hf)
 
-fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 ax.scatter(lf_data[:, 0], lf_data[:, 1], c=labels, cmap='tab10')
+ax.scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1],  marker='x', color='red', s=100, label='Centroids')
 
 ax.legend()
 ax.set_xlabel(r"$u_1$", fontsize=16)
@@ -196,9 +197,9 @@ model.summary()
 # Plot the datasets
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))
 ax.scatter(lf_data[:, 0], lf_data[:, 1], color='orange', label='LF data')
-ax.scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1], color='blue', label='HF data')
+ax.scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1], color='blue', label='Centroids')
 ax.scatter(mf_data[:, 0], mf_data[:, 1], color='green', label='MF data')
-ax.scatter(hf_data[:, 0], hf_data[:, 1], color='red')
+ax.scatter(hf_data[:, 0], hf_data[:, 1], color='red', label='HF data')
 for i in range(len(inds_centroids)):
     ax.plot(
         [lf_data[inds_centroids[i], 0], hf_data[i, 0]],
@@ -220,9 +221,9 @@ This can be visualized for this simple 2-d example:
 
 ```python
 # Plot the variance of multi-fidelity esimates
-fig, ax = plt.subplots(1, 1, figsize=(7.5, 6))
-scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var, s=50, vmin=0.025)
-ax.scatter(mf_data[inds_centroids, 0], mf_data[inds_centroids, 1], c='red', s=50, label='Training data')
+fig, ax = plt.subplots(1, 1, figsize=(6, 5))
+scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var, s=40, vmin=0.025)
+ax.scatter(mf_data[inds_centroids, 0], mf_data[inds_centroids, 1], c='red', s=40, label='Training data')
 ax.set_title("Variance of multi-fidelity estimates", fontsize=16)
 ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
