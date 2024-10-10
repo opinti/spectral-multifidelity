@@ -20,3 +20,7 @@ data/darcy/*
 !data/solid_inclusion_qoi/
 data/solid_inclusion_qoi/*
 !data/solid_inclusion_qoi/.gitkeep
+
+!data/solid_inclusion/
+data/solid_inclusion/*
+!data/solid_inclusion/.gitkeep
