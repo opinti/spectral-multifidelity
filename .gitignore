@@ -9,22 +9,18 @@ data/*
 data/beam/*
 !data/beam/.gitkeep
 
-data/*
 !data/cavity/
 data/cavity/*
 !data/cavity/.gitkeep
 
-data/*
 !data/darcy/
 data/darcy/*
 !data/darcy/.gitkeep
 
-data/*
 !data/solid_inclusion/
 data/solid_inclusion/*
 !data/solid_inclusion/.gitkeep
 
-data/*
 !data/solid_inclusion_qoi/
 data/solid_inclusion_qoi/*
 !data/solid_inclusion_qoi/.gitkeep
