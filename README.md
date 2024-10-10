@@ -160,8 +160,8 @@ ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 ### 3. Using the clustering functionalities to select high-fidelity data
 
-The `MultiFidelityModel` class also supports spectral clustering operations. 
-Here's an example of clustering using the cluster method.
+The `MultiFidelityModel` class also perform spectral clustering. 
+Here's an example of using the cluster method:
 
 ```python
 # Perform clustering on the graph to find the high-fidelity indices
@@ -178,7 +178,7 @@ ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ![Example Clustering](figures/example-clustering.png)
 
 
-Clustering can be used to find the nodes where to acquire high-fidelity data:
+Clustering can be used to select the nodes where to acquire high-fidelity data:
 
 ```python
 # Aquire high-fidelity data at the centroids location
@@ -215,7 +215,8 @@ ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ![Example-2](figures/example-2.png)
 
 
-You also have uncertainty accosiated to each multi-fidelity esimate, which can be visualized in this simple 2-d example:
+The model provides also the variance, i.e. an uncertainty measure, of each multi-fidelity esimate.
+This can be visualized for this simple 2-d example:
 
 ```python
 # Plot the variance of multi-fidelity esimates
