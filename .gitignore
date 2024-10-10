@@ -1,5 +1,6 @@
 _data/
 data/beam/*
+!data/beam/.gitkeep
 data/cavity/
 data/darcy/
 data/solid_inclusion/
