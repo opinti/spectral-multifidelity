@@ -96,7 +96,7 @@ It allows you to transform all nodes of a graph based on a few more accurate nod
 
 #### 2.1 Generate some synthetic data
 
-First, let's generate some data to use in this illustrative example:
+First, let's generate some 2-d data to use in a simple example:
 
 ```python
 import numpy as np
@@ -116,7 +116,7 @@ lf_data = np.vstack((
     0.20 * np.random.randn(n_lf, 2) + [-0.5, -0.75],
 ))
 
-# High-fidelity undelrying (unknown) data
+# High-fidelity (unknown) data
 hf_data = np.vstack((
     lf_data[:n_lf, :] + [1.5, 1.75],
     lf_data[n_lf:2 * n_lf, :] + [-2, 1.75],
@@ -127,6 +127,27 @@ hf_data = np.vstack((
 hf_train_inds = np.random.choice(3 * n_lf, n_hf)
 hf_data_train = hf_data[hf_train_inds, :]
 ```
+
+This is what the low- and high-fidelity datasets look like:
+
+```python
+fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+axs[0].set_title('Low-fidelity data', fontsize=16)
+axs[0].scatter(lf_data[:, 0], lf_data[:, 1], s=15, c='orange')
+axs[1].set_title('High-fidelity data', fontsize=16)
+axs[1].scatter(hf_data[:, 0], hf_data[:, 1], s=15, c='red')
+
+for ax in axs:
+    ax.set_xlabel(r"$u_1$", fontsize=16)
+    ax.grid(True)
+    ax.set_xlim(-3.75, 2.5)
+    ax.set_ylim(-3.5, 3.5)
+axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
+```
+
+![Example-Data](figures/example-datasets.png)
+
+
 #### 2.2 Use of `Graph` and `MultiFidelityModel`
 
 Let's now use a model to transform the nodes:
