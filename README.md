@@ -1,8 +1,8 @@
-# Graph-Laplacian based Bayesian Spectral Multifidelity Library
+# Graph Laplacian-based Bayesian Multi-fidelity Modeling
 
 ## Overview
 
-A Python package for graph-laplacian based multi-fidelity modeling.
+A Python package for graph laplacian-based multi-fidelity modeling.
 
 ![Graphical Abstract](figures/graphical-abstract.png)
 
