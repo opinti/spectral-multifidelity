@@ -94,7 +94,7 @@ The `MultiFidelityModel` class is designed to perform multi-fidelity modeling.
 It allows you to transform all nodes of a graph based on a few more accurate nodes data.
 
 
-## 2.1 Generate some synthetic data
+#### 2.1 Generate some synthetic data
 
 First, let's generate some data to use in this illustrative example:
 
@@ -127,7 +127,7 @@ hf_data = np.vstack((
 hf_train_inds = np.random.choice(3 * n_lf, n_hf)
 hf_data_train = hf_data[hf_train_inds, :]
 ```
-## 2.2 Use of `Graph` and `MultiFidelityModel`
+#### 2.2 Use of `Graph` and `MultiFidelityModel`
 
 Let's now use a model to transform the nodes:
 
@@ -164,7 +164,7 @@ mf_data, mf_covar_mat, mf_var = model.transform(
 )
 model.summary()
 ```
-## 2.3 Visualize the results
+#### 2.3 Visualize the results
 
 We can now plot the low-, multi-, and high-fidleity data:
 
@@ -207,10 +207,10 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ![Example-1](figures/example-1.png)
 
 
-### 3. Using the clustering functionalities to select high-fidelity data
+### 3. Spectral clustering
 
-The `MultiFidelityModel` class can also perform spectral clustering. 
-Here's an example of using the cluster method:
+The `MultiFidelityModel` class has also built-in functionalities to perform spectral clustering of graphs. 
+Here's an example of using the `cluster()` method:
 
 ```python
 # Perform clustering on the graph to find the high-fidelity indices
@@ -229,6 +229,7 @@ ax.grid(True)
 
 ![Example Clustering](figures/example-clustering.png)
 
+#### 3.1 High-fidelity data aquisition policy
 
 Clustering can be used to select the nodes where to acquire high-fidelity data.
 Let's use the model again with a new set of training high-fidelity data:
@@ -246,7 +247,7 @@ mf_data, mf_covar_mat, mf_var = model.transform(
 model.summary()
 ```
 
-The results with a HF acquisition strategy based on clustering:
+The results with a high-fidelity data acquisition strategy based on clustering:
 
 ```python
 ## Plot results
