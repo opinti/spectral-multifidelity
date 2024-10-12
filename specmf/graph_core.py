@@ -182,10 +182,9 @@ class GraphCore:
         Returns:
         - np.ndarray: The adjacency matrix.
         """
-        dist_matrix = kneighbors_graph(
-            data, k, mode="distance", metric=metric
-        ).toarray()
-        dist_matrix[dist_matrix == 0] = np.inf
+        dist_matrix = kneighbors_graph(data, k, mode="distance", metric=metric)
+        dist_matrix = dist_matrix.toarray()  # Convert to dense matrix
+        dist_matrix[dist_matrix == 0] = np.inf  # Set 0s (non-neighbors) to infinity.
         return dist_matrix
 
     def _scale_distance_matrix(self, dist_matrix: np.ndarray) -> np.ndarray:
