@@ -9,8 +9,8 @@ def preprocess_data(
     Preprocess datasets: removes NaN, Inf values, and duplicates.
 
     Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix (n_dim1, n_dim2, n_points).
-    - X_HF (np.ndarray): High-fidelity data matrix (n_dim1, n_dim2, n_points).
+    - X_LF (np.ndarray): Low-fidelity data matrix (n_dim1, n_dim2, n_samples).
+    - X_HF (np.ndarray): High-fidelity data matrix (n_dim1, n_dim2, n_samples).
 
     Returns:
     - Tuple: Preprocessed low- and high-fidelity matrices and a global mask. The
@@ -273,16 +273,16 @@ def _flatten_snapshots(X: np.ndarray) -> np.ndarray:
     Flatten the snapshots in the data matrix.
 
     Parameters:
-    - X (np.ndarray): Data matrix of shape (n_dim1, n_dim2, n_points).
+    - X (np.ndarray): Data matrix of shape (n_dim1, n_dim2, n_samples).
 
     Returns:
-    - Flattened data matrix of shape (n_points, n_dim1 * n_dim2).
+    - Flattened data matrix of shape (n_samples, n_dim1 * n_dim2).
     """
     if X.ndim != 3:
         raise ValueError(f"Input matrix must be 3D. Got shape {X.shape}.")
 
-    n_points = X.shape[-1]
-    return np.array([X[:, :, i].flatten() for i in range(n_points)])
+    n_samples = X.shape[-1]
+    return np.array([X[:, :, i].flatten() for i in range(n_samples)])
 
 
 def _unflatten_snapshots(X: np.ndarray, shape_X: Tuple[int, int]) -> np.ndarray:
@@ -301,14 +301,14 @@ def _unflatten_snapshots(X: np.ndarray, shape_X: Tuple[int, int]) -> np.ndarray:
     if X.ndim != 2:
         raise ValueError(f"Input matrix must be 2-dimensional, got shape {X.shape}.")
 
-    n_points = X.shape[0]
+    n_samples = X.shape[0]
     if shape_X is None:
         n_dim1 = int(np.sqrt(X.shape[1]))
         n_dim2 = n_dim1
     else:
         n_dim1, n_dim2 = shape_X
 
-    X_ = np.zeros((n_dim1, n_dim2, n_points))
-    for i in range(n_points):
+    X_ = np.zeros((n_dim1, n_dim2, n_samples))
+    for i in range(n_samples):
         X_[:, :, i] = X[i, :].reshape(n_dim1, n_dim2)
     return X_
