@@ -34,7 +34,7 @@ def test_graph_init(graph_instance):
     """Test if Graph is initialized correctly."""
     graph = graph_instance
     assert graph.n_nodes == 10
-    assert graph.n_dim == 2
+    assert graph.n_features == 2
     assert isinstance(graph.adjacency, np.ndarray)
     assert isinstance(graph.graph_laplacian, np.ndarray)
     assert graph.adjacency.shape == (10, 10)
