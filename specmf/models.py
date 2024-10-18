@@ -156,6 +156,7 @@ class MultiFidelityModel:
         step_decay_rate: float = 0.95,
         momentum: float = 0.5,
         ftol_rel: float = 1e-8,
+        verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
@@ -216,22 +217,23 @@ class MultiFidelityModel:
             else:
                 grad = momentum * grad + (1 - momentum) * dloss_dkappa
 
-            # Update kappa
             _kappa -= step_size * grad
             step_size *= step_decay_rate
             self.kappa = _kappa
             kappa_history.append(_kappa)
 
-            # Convergence check
+            if verbose:
+                print(f"Iteration: {it}, Loss: {loss}, Gradient: {dloss_dkappa}")
+
             if it > 0 and np.abs(loss_history[-2] - loss) / loss < ftol_rel:
                 break
 
-        print(f"Completed after {it} iterations.")
-        print(f"Loss: {loss}, Gradient: {dloss_dkappa}")
-        params_to_print = ["kappa", "omega", "tau"]
-        self.summary(params_to_print=params_to_print)
+        if verbose:
+            print(f"Completed after {it} iterations.")
+            print(f"Loss: {loss}, Gradient: {dloss_dkappa}")
+            params_to_print = ["kappa", "omega", "tau"]
+            self.summary(params_to_print=params_to_print)
 
-        # Return the final transformation and the loss value history
         return self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
 
     def cluster(
