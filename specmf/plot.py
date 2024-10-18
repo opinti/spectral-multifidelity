@@ -86,6 +86,30 @@ def plot_cluster_size_hist(labels: np.ndarray) -> None:
     plt.tight_layout()
 
 
+def plot_loss_and_kappa(iterations, loss_history, kappa_history):
+    """
+    Plot loss history and kappa history on the same figure with two y-axes.
+    """
+    fig, ax1 = plt.subplots(figsize=(8, 5))
+
+    # Plot loss history
+    ax1.plot(iterations, loss_history, "b-", label="Loss")
+    ax1.set_yscale("log")
+    ax1.set_xlabel("Iteration", fontsize=14)
+    ax1.set_ylabel("Loss", color="b", fontsize=14)
+    ax1.tick_params(axis="y", labelcolor="b")
+
+    # Plot kappa history
+    ax2 = ax1.twinx()
+    ax2.plot(iterations, kappa_history, "r-", label=r"$\kappa$")
+    ax2.set_ylabel(r"$\kappa$", color="r", rotation=0, labelpad=20, fontsize=16)
+    ax2.tick_params(axis="y", labelcolor="r")
+
+    ax1.grid(True)
+    plt.title("Loss and Kappa History")
+    plt.show()
+
+
 # Data plotting functions
 def plot_data(X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs) -> None:
     """Plot low-fidelity and high-fidelity data based on the dataset name."""
