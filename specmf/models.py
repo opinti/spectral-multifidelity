@@ -156,6 +156,7 @@ class MultiFidelityModel:
         step_size: float = 1.0,
         step_decay_rate: float = 0.999,
         ftol: float = 1e-6,
+        gtol: float = 1e-8,
         verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -177,6 +178,7 @@ class MultiFidelityModel:
         - step_size (float): Initial step size for the optimization.
         - step_decay_rate (float): Rate at which the step size decays.
         - ftol (float): Tolerance for the loss function. Optimization stops when the loss is below this value.
+        - gtol (float): Tolerance for the gradient. Optimization stops when the gradient is below this value.
         - verbose (bool): If True, print the loss and gradient at each iteration.
 
         Returns:
@@ -239,8 +241,9 @@ class MultiFidelityModel:
                     f"Iteration: {it}, Loss: {loss}, Gradient: {grad}, Kappa: {self.kappa}"
                 )
 
-            if it > 0 and loss < ftol:
-                break
+            if it > 0:
+                if loss < ftol or abs(grad) < gtol:
+                    break
 
         if verbose:
             print(f"\n---- Completed after {it} iterations.")
