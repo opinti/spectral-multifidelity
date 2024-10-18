@@ -102,6 +102,7 @@ def plot_loss_and_kappa(iterations, loss_history, kappa_history):
     # Plot kappa history
     ax2 = ax1.twinx()
     ax2.plot(iterations, kappa_history, "r-", label=r"$\kappa$")
+    ax2.set_yscale("log")
     ax2.set_ylabel(r"$\kappa$", color="r", rotation=0, labelpad=20, fontsize=16)
     ax2.tick_params(axis="y", labelcolor="r")
 
