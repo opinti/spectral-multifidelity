@@ -154,15 +154,17 @@ class MultiFidelityModel:
         maxiter: int = 100,
         step_size: float = 1e-2,
         step_decay_rate: float = 0.95,
-        momentum: float = 0.1,
-        ftol_rel: float = 1e-8,
+        ftol: float = 1e-6,
         verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
         estimates and the noise level of the high-fidelity data is equal to r. Then, return the multi-fidelity data.
 
-        Loss function: (mean(dPhi) - * r * sigma)^2
+        Note:
+            Loss function: (mean(dPhi) - * r * sigma)^2
+        Note:
+            Search is performed in the log-space.
 
         Parameters:
         - g_LF (Graph): The low-fidelity graph.
@@ -173,7 +175,6 @@ class MultiFidelityModel:
         - maxiter (int): Maximum number of iterations.
         - step_size (float): Initial step size for the optimization.
         - step_decay_rate (float): Rate at which the step size decays.
-        - momentum (float): Momentum parameter for the gradient update.
         - ftol (float): Tolerance for the change in the loss function value. Optimization stops when
             the change is less than this value.
 
@@ -187,7 +188,7 @@ class MultiFidelityModel:
             eigvals, _ = g_LF.laplacian_eig()
             self.tau = self._compute_spectral_gap(eigvals)
 
-        _kappa = self.kappa
+        log_kappa = np.log(self.kappa)
 
         x_LF = g_LF.nodes
         L = g_LF.graph_laplacian
@@ -201,6 +202,7 @@ class MultiFidelityModel:
         for it in range(maxiter):
 
             # Compute the convariance matrix
+            _kappa = np.exp(log_kappa)
             self.omega = _kappa / (self.tau**self.beta)
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
@@ -209,28 +211,27 @@ class MultiFidelityModel:
             loss_history.append(loss)
 
             # Update the loss gradient with momentum
-            dloss_dC = (1 / n_LF) * (np.mean(dPhi) - r * self.sigma) * np.diag(1 / dPhi)
-            dC_dkappa = -(1 / self.tau**self.beta) * C @ self.L_reg @ C
-            dloss_dkappa = np.sum(dloss_dC * dC_dkappa)
-            if it == 0:
-                grad = dloss_dkappa
-            else:
-                grad = momentum * grad + (1 - momentum) * dloss_dkappa
+            dloss_dC = (1 / n_LF) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
+            dC_dkappa = -np.diag((1 / self.tau**self.beta) * C @ self.L_reg @ C)
+            dkappa_dlogkappa = _kappa
+            grad = np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
 
-            _kappa -= step_size * grad
+            log_kappa -= step_size * grad
             step_size *= step_decay_rate
-            self.kappa = _kappa
-            kappa_history.append(_kappa)
+
+            # Store kappa history in the natural scale
+            self.kappa = np.exp(log_kappa)
+            kappa_history.append(self.kappa)
 
             if verbose:
-                print(f"Iteration: {it}, Loss: {loss}, Gradient: {dloss_dkappa}")
+                print(f"Iteration: {it}, Loss: {loss}, Gradient: {grad}")
 
-            if it > 0 and np.abs(loss_history[-2] - loss) / loss < ftol_rel:
+            if it > 0 and np.abs(loss_history[-2] - loss) < ftol:
                 break
 
         if verbose:
             print(f"Completed after {it} iterations.")
-            print(f"Loss: {loss}, Gradient: {dloss_dkappa}")
+            print(f"Loss: {loss}, Gradient: {grad}")
             params_to_print = ["kappa", "omega", "tau"]
             self.summary(params_to_print=params_to_print)
 
