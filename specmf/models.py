@@ -19,7 +19,7 @@ class Graph(GraphCore):
         self.eigvals = None
 
         self.nodes = kwargs.get("data")
-        self.n_nodes, self.n_dim = self.nodes.shape
+        self.n_nodes, self.n_features = self.nodes.shape
 
     @cached_property
     def adjacency(self) -> np.ndarray:
@@ -49,7 +49,7 @@ class MultiFidelityModel:
     MultiFidelityModel is a class that performs multi-fidelity modeling using specMF method.
 
     Parameters:
-    - sigma (float): The parameter controlling the noise level in the data. Default is 1e-2.
+    - sigma (float): Noise level of high-fidelity data. Default is 1e-2.
     - beta (int): The parameter controlling the regularization of the graph Laplacian. Default is 2.
     - kappa (float): The parameter controlling the fidelity of the high-fidelity data. Default is 1e-3.
     - method (str): SpecMF variation to computing multi-fidelity data. Can be 'full' or 'trunc'. Default is 'full'.
@@ -57,6 +57,7 @@ class MultiFidelityModel:
 
     Methods:
     - transform(): Compute multi-fidelity data from low-fidelity graph.
+    - fit_transform(): Fit omega and return the multi-fidelity data.
     - cluster(): Perform spectral clustering of the low-fidelity graph.
     - fit(): Fit the hyperparameters of the model.
     - predict(): Predict the high-fidelity version of given low-fidelity data sample.
@@ -98,6 +99,7 @@ class MultiFidelityModel:
         self.labels = None
         self.n_clusters = None
         self._is_graph_clustered = False
+        self.L_reg = None
 
         self._check_config()
 
@@ -109,7 +111,7 @@ class MultiFidelityModel:
 
         Parameters:
         - g_LF (Graph): The low-fidelity graph.
-        - x_HF (np.ndarray): The high-fidelity data (n_points_HF, n_dim).
+        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
         - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
             in x_HF and the low-fidelity data contained in g_LF.nodes.
 
@@ -131,9 +133,8 @@ class MultiFidelityModel:
                 f"Got {x_HF.shape[0]} high-fidelity points and {len(inds_train)} indices."
             )
 
-        eigvals, _ = g_LF.laplacian_eig()
-
         if self.tau is None:
+            eigvals, _ = g_LF.laplacian_eig()
             self.tau = self._compute_spectral_gap(eigvals)
 
         if self.omega is None:
@@ -143,6 +144,92 @@ class MultiFidelityModel:
             return self._compute_specmf_data(g_LF, x_HF, inds_train)
         elif self.method == "trunc":
             return self._compute_specmf_data_trunc(g_LF, x_HF, inds_train)
+
+    def fit_transform(
+        self,
+        g_LF: Graph,
+        x_HF: np.ndarray,
+        inds_train: list = None,
+        r: float = 3.0,
+        maxiter: int = 100,
+        step_size: float = 10.0,
+        step_decay_rate: float = 0.95,
+        momentum: float = 0.9,
+        ftol_rel: float = 1e-3,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
+        estimates and the noise level of the high-fidelity data is equal to r. Then, return the multi-fidelity data.
+
+        Loss function: (1/n) * sum_i (dPhi_i - r * sigma)^2
+
+        Parameters:
+        - g_LF (Graph): The low-fidelity graph.
+        - x_HF (np.ndarray): The high-fidelity data (N-samples_HF, n_features).
+        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
+            in x_HF and the low-fidelity data contained in g_LF.nodes.
+        - r (float): The ratio of the mean multi-fidelity uncertainty to the high-fidelity noise level.
+        - maxiter (int): Maximum number of iterations.
+        - step_size (float): Initial step size for the optimization.
+        - step_decay_rate (float): Rate at which the step size decays.
+        - momentum (float): Momentum parameter for the gradient update.
+        - ftol (float): Tolerance for the change in the loss function value. Optimization stops when
+            the change is less than this value.
+
+        Returns:
+        - tuple: The computed multi-fidelity data.
+        - list: The loss history.
+        """
+
+        if self.tau is None:
+            eigvals, _ = g_LF.laplacian_eig()
+            self.tau = self._compute_spectral_gap(eigvals)
+
+        _kappa = self.kappa
+
+        x_LF = g_LF.nodes
+        L = g_LF.graph_laplacian
+        n_LF = x_LF.shape[0]
+        if self.L_reg is None:
+            self.L_reg = np.linalg.matrix_power(L + self.tau * np.eye(n_LF), self.beta)
+
+        loss_history = []
+
+        for it in range(maxiter):
+
+            # Compute the convariance matrix
+            self.omega = _kappa / (self.tau**self.beta)
+            _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
+
+            # Compute the loss
+            loss = (np.mean(dPhi) - r * self.sigma) ** 2
+            loss_history.append(loss)
+
+            # Update the loss gradient with momentum
+            dloss_dC = (np.mean(dPhi) - r * self.sigma) * (1 / n_LF) * np.diag(1 / dPhi)
+            dC_dkappa = -C @ self.L_reg @ C * (1 / (self.tau**self.beta))
+            dloss_dkappa = np.mean(dloss_dC * dC_dkappa)
+            if it == 0:
+                grad = dloss_dkappa
+            else:
+                grad = momentum * grad + (1 - momentum) * dloss_dkappa
+
+            # Update kappa
+            _kappa -= step_size * grad
+            step_size *= step_decay_rate
+            self.kappa = _kappa
+
+            # Convergence check
+            if it > 0 and np.abs(loss_history[-2] - loss) / loss < ftol_rel:
+                break
+
+        print(f"Completed after {it} iterations.")
+        print(f"Loss: {loss}, Gradient: {dloss_dkappa}")
+        params_to_print = ["kappa", "omega", "tau"]
+        self.summary(params_to_print=params_to_print)
+
+        # Return the final transformation and the loss value history
+        return self.transform(g_LF, x_HF, inds_train), loss_history
 
     def cluster(
         self, g_LF: Graph, n: int, new_clustering: bool = False
@@ -189,7 +276,11 @@ class MultiFidelityModel:
         P_N = np.zeros((n_HF, n_LF))
         P_N[np.arange(n_HF), inds_train] = 1
 
-        L_reg = np.linalg.matrix_power(L + self.tau * np.eye(n_LF), self.beta)
+        if self.L_reg is None:
+            L_reg = np.linalg.matrix_power(L + self.tau * np.eye(n_LF), self.beta)
+        else:
+            L_reg = self.L_reg
+
         B = (1 / self.sigma**2) * (P_N.T @ P_N) + self.omega * L_reg
 
         C_phi = solve(B, np.eye(n_LF))
@@ -231,11 +322,17 @@ class MultiFidelityModel:
         log_curvature = log_eigvals[:-2] + log_eigvals[2:] - 2 * log_eigvals[1:-1]
         return eigvals[np.argmin(log_curvature) + 1]
 
-    def summary(self) -> None:
-        """Print the model configuration."""
-        max_key_length = max(
-            len(key) for key in self.__dict__ if key in self._contained_params
-        )
+    def summary(self, params_to_print: list = None) -> None:
+        """
+        Print the model configuration.
+
+        Parameters:
+        - params_to_print (list): List of parameters to print. Default is all parameters.
+        """
+        if params_to_print is None:
+            params_to_print = self._contained_params
+
+        max_key_length = max(len(key) for key in params_to_print)
         divider = "=" * 3 * max_key_length
 
         print(divider)
@@ -243,7 +340,7 @@ class MultiFidelityModel:
         print(divider)
 
         for key, value in self.__dict__.items():
-            if key in self._contained_params:
+            if key in params_to_print:
                 print(f"{key.ljust(max_key_length + 4)}: {value}")
 
         print(divider)
