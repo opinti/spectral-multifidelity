@@ -154,8 +154,8 @@ class MultiFidelityModel:
         maxiter: int = 100,
         step_size: float = 10.0,
         step_decay_rate: float = 0.95,
-        momentum: float = 0.9,
-        ftol_rel: float = 1e-3,
+        momentum: float = 0.5,
+        ftol_rel: float = 1e-8,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
@@ -179,6 +179,7 @@ class MultiFidelityModel:
         Returns:
         - tuple: The computed multi-fidelity data.
         - list: The loss history.
+        - list: The kappa history.
         """
 
         if self.tau is None:
@@ -194,6 +195,7 @@ class MultiFidelityModel:
             self.L_reg = np.linalg.matrix_power(L + self.tau * np.eye(n_LF), self.beta)
 
         loss_history = []
+        kappa_history = []
 
         for it in range(maxiter):
 
@@ -218,6 +220,7 @@ class MultiFidelityModel:
             _kappa -= step_size * grad
             step_size *= step_decay_rate
             self.kappa = _kappa
+            kappa_history.append(_kappa)
 
             # Convergence check
             if it > 0 and np.abs(loss_history[-2] - loss) / loss < ftol_rel:
@@ -229,7 +232,7 @@ class MultiFidelityModel:
         self.summary(params_to_print=params_to_print)
 
         # Return the final transformation and the loss value history
-        return self.transform(g_LF, x_HF, inds_train), loss_history
+        return self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
 
     def cluster(
         self, g_LF: Graph, n: int, new_clustering: bool = False
