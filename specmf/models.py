@@ -162,7 +162,7 @@ class MultiFidelityModel:
         Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
         estimates and the noise level of the high-fidelity data is equal to r. Then, return the multi-fidelity data.
 
-        Loss function: (1/n) * sum_i (dPhi_i - r * sigma)^2
+        Loss function: (sum_i (dPhi_i) - n_samples * r * sigma)^2
 
         Parameters:
         - g_LF (Graph): The low-fidelity graph.
@@ -205,13 +205,13 @@ class MultiFidelityModel:
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
             # Compute the loss
-            loss = (np.mean(dPhi) - r * self.sigma) ** 2
+            loss = (np.sum(dPhi) - n_LF * r * self.sigma) ** 2
             loss_history.append(loss)
 
             # Update the loss gradient with momentum
-            dloss_dC = (np.mean(dPhi) - r * self.sigma) * (1 / n_LF) * np.diag(1 / dPhi)
-            dC_dkappa = -C @ self.L_reg @ C * (1 / (self.tau**self.beta))
-            dloss_dkappa = np.mean(dloss_dC * dC_dkappa)
+            dloss_dC = (np.mean(dPhi) - r * self.sigma) * np.diag(1 / dPhi)
+            dC_dkappa = -(1 / (self.tau**self.beta)) * C @ self.L_reg @ C
+            dloss_dkappa = np.sum(dloss_dC * dC_dkappa)
             if it == 0:
                 grad = dloss_dkappa
             else:
