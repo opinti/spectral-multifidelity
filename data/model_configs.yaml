@@ -17,7 +17,7 @@ cavity:
 darcy-flow:
   model_config:
     beta: 2
-    kappa: 0.212
+    kappa: 0.1564
     method: trunc
     sigma: 0.01
     spectrum_cutoff: 1200

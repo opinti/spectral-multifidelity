@@ -99,6 +99,7 @@ class MultiFidelityModel:
         self.labels = None
         self.n_clusters = None
         self._is_graph_clustered = False
+        self._is_fit = False
         self.L_reg = None
 
         self._check_config()
@@ -151,9 +152,9 @@ class MultiFidelityModel:
         x_HF: np.ndarray,
         inds_train: list = None,
         r: float = 3.0,
-        maxiter: int = 100,
-        step_size: float = 1e-2,
-        step_decay_rate: float = 0.95,
+        maxiter: int = 10,
+        step_size: float = 1.0,
+        step_decay_rate: float = 0.999,
         ftol: float = 1e-6,
         verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -175,14 +176,21 @@ class MultiFidelityModel:
         - maxiter (int): Maximum number of iterations.
         - step_size (float): Initial step size for the optimization.
         - step_decay_rate (float): Rate at which the step size decays.
-        - ftol (float): Tolerance for the change in the loss function value. Optimization stops when
-            the change is less than this value.
+        - ftol (float): Tolerance for the loss function. Optimization stops when the loss is below this value.
+        - verbose (bool): If True, print the loss and gradient at each iteration.
 
         Returns:
         - tuple: The computed multi-fidelity data.
         - list: The loss history.
         - list: The kappa history.
         """
+
+        if self._is_fit:
+            print(
+                "Warning: Model has already been fitted. "
+                "Fitting will continue from the last state."
+            )
+            print("\nTo start a new fitting, create a new instance of the model.")
 
         if self.tau is None:
             eigvals, _ = g_LF.laplacian_eig()
@@ -212,7 +220,10 @@ class MultiFidelityModel:
 
             # Update the loss gradient with momentum
             dloss_dC = (1 / n_LF) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
-            dC_dkappa = -np.diag((1 / self.tau**self.beta) * C @ self.L_reg @ C)
+            # np.sum(np.multiply(A.T, B), axis=0) == np.diag(A @ B)
+            dC_dkappa = -(1 / self.tau**self.beta) * np.sum(
+                np.multiply(C.T, self.L_reg @ C), axis=0
+            )
             dkappa_dlogkappa = _kappa
             grad = np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
 
@@ -224,17 +235,18 @@ class MultiFidelityModel:
             kappa_history.append(self.kappa)
 
             if verbose:
-                print(f"Iteration: {it}, Loss: {loss}, Gradient: {grad}")
+                print(
+                    f"Iteration: {it}, Loss: {loss}, Gradient: {grad}, Kappa: {self.kappa}"
+                )
 
-            if it > 0 and np.abs(loss_history[-2] - loss) < ftol:
+            if it > 0 and loss < ftol:
                 break
 
         if verbose:
-            print(f"Completed after {it} iterations.")
-            print(f"Loss: {loss}, Gradient: {grad}")
-            params_to_print = ["kappa", "omega", "tau"]
-            self.summary(params_to_print=params_to_print)
+            print(f"\n---- Completed after {it} iterations.")
+            print(f"Final Loss: {loss}")
 
+        self._is_fit = True
         return self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
 
     def cluster(
