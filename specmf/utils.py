@@ -110,22 +110,3 @@ def error_analysis(
 
     if return_values:
         return e_lf, e_mf
-
-
-def val_test_split(
-    n_data: int, inds_train: list, split_ratio: float = 0.8, seed: int = 42
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Split the indices of the data points not used for training into validation and test sets.
-    Parameters:
-    - n_data (int): Total number of data points.
-    - inds_train (list): Indices of the data points used for training.
-    - split_ratio (float): Ratio of validation to test data points
-    - seed (int): Random seed for reproducibility.
-    """
-    np.random.seed(seed)
-    inds_rest = np.delete(np.arange(n_data), inds_train)
-    np.random.shuffle(inds_rest)
-    n_val_points = int(split_ratio * len(inds_rest))
-    inds_val, inds_test = inds_rest[:n_val_points], inds_rest[n_val_points:]
-    return inds_val, inds_test
