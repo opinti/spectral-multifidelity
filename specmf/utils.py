@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Tuple, Union
 from sklearn.cluster import KMeans
+import yaml
 
 
 def ordered_eig(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -110,3 +111,16 @@ def error_analysis(
 
     if return_values:
         return e_lf, e_mf
+
+
+def load_model_config(config_path, dataset_name):
+    """
+    Load model configuration from a YAML file.
+    """
+    try:
+        with open(config_path, "r") as file:
+            MODEL_CONFIG = yaml.safe_load(file)
+        return MODEL_CONFIG[dataset_name]["model_config"]
+    except FileNotFoundError:
+        print(f"File not found at {config_path}.")
+        return None
