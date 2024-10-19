@@ -1,7 +1,7 @@
 beam:
   model_config:
     beta: 2
-    kappa: 1.179e-06
+    kappa: 6.743e-07
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -9,7 +9,7 @@ beam:
 cavity:
   model_config:
     beta: 2
-    kappa: 0.000483
+    kappa: 0.000385
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -17,7 +17,7 @@ cavity:
 darcy-flow:
   model_config:
     beta: 2
-    kappa: 0.1564
+    kappa: 0.1552
     method: trunc
     sigma: 0.01
     spectrum_cutoff: 1200
@@ -25,7 +25,7 @@ darcy-flow:
 inclusion-field:
   model_config:
     beta: 2
-    kappa: 2.683e-09
+    kappa: 3.883e-09
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -33,7 +33,7 @@ inclusion-field:
 inclusion-qoi:
   model_config:
     beta: 2
-    kappa: 0.045
+    kappa: 0.03178
     method: full
     sigma: 0.01
     spectrum_cutoff: null
