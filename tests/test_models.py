@@ -69,6 +69,25 @@ def test_graph_len(graph_instance):
     assert len(graph) == 10
 
 
+def test_model_cluster_invalid_n_clusters(graph_instance, model_instance):
+    """Test if cluster method raises an error for invalid number of clusters."""
+    graph = graph_instance
+
+    with pytest.raises(ValueError, match="Invalid number of clusters"):
+        graph.cluster(0)  # Invalid number of clusters
+
+
+def test_graph_cluster(graph_instance, model_instance):
+    """Test if clustering works with valid inputs."""
+    graph = graph_instance
+
+    inds_centroids, labels = graph.cluster(n=2)
+
+    assert inds_centroids.shape == (2,)
+    assert labels.shape == (10,)
+    assert len(set(labels)) == 2  # Should form 2 clusters
+
+
 # Tests for the MultiFidelityModel class
 
 
@@ -87,9 +106,10 @@ def test_model_transform_dimension_mismatch(
     graph = graph_instance
     model = model_instance
     high_fidelity_data = sample_high_fidelity_data[:, :1]  # Mismatch in dimension
+    inds_train = np.arange(high_fidelity_data.shape[0])
 
     with pytest.raises(AssertionError, match="Dimension mismatch"):
-        model.transform(graph, high_fidelity_data)
+        model.transform(graph, high_fidelity_data, inds_train)
 
 
 def test_model_transform_no_inds_train(
@@ -99,10 +119,7 @@ def test_model_transform_no_inds_train(
     graph = graph_instance
     model = model_instance
 
-    with pytest.raises(
-        ValueError,
-        match="Indices that map the high-to-low-fidelity data must be provided",
-    ):
+    with pytest.raises(TypeError):
         model.transform(graph, sample_high_fidelity_data)
 
 
@@ -136,28 +153,6 @@ def test_model_transform(graph_instance, sample_high_fidelity_data, model_instan
     assert dPhi.shape == (10,)
 
 
-def test_model_cluster_invalid_n_clusters(graph_instance, model_instance):
-    """Test if cluster method raises an error for invalid number of clusters."""
-    graph = graph_instance
-    model = model_instance
-
-    with pytest.raises(ValueError, match="Invalid number of clusters"):
-        model.cluster(graph, 0)  # Invalid number of clusters
-
-
-def test_model_cluster(graph_instance, model_instance):
-    """Test if clustering works with valid inputs."""
-    graph = graph_instance
-    model = model_instance
-
-    inds_centroids, labels = model.cluster(graph, n=2)
-
-    assert inds_centroids.shape == (2,)
-    assert labels.shape == (10,)
-    assert len(set(labels)) == 2  # Should form 2 clusters
-
-
 if __name__ == "__main__":
-    import pytest
 
     pytest.main()
