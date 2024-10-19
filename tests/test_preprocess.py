@@ -82,6 +82,5 @@ def test_flatten_and_unflatten(sample_data):
 
 
 if __name__ == "__main__":
-    import pytest
 
     pytest.main()

@@ -138,6 +138,5 @@ def test_graphcore_self_tuned_scaling_invalid_k(sample_data):
 
 
 if __name__ == "__main__":
-    import pytest
 
     pytest.main()
