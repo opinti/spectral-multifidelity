@@ -11,6 +11,13 @@ class Graph(GraphCore):
     and quantities like the adjacency matrix, graph Laplacian, and eigenvectors
     and eigenvalues of the graph Laplacian. All computations are performed by
     the GraphCore methods.
+
+    Methods:
+    - adjacency(): Compute and return the adjacency matrix. Cached property.
+    - graph_laplacian(): Compute and return the graph Laplacian. Cached property.
+    - laplacian_eig(): Return the eigenvalues and eigenvectors of the graph Laplacian. Cached property.
+    - cluster(): Perform spectral clustering of the graph nodes and return the indices of the centroids
+        of the clusters and the labels of the nodes.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -20,6 +27,11 @@ class Graph(GraphCore):
 
         self.nodes = kwargs.get("data")
         self.n_nodes, self.n_features = self.nodes.shape
+
+        self.inds_centroids = None
+        self.labels = None
+        self.n_clusters = None
+        self._is_graph_clustered = False
 
     @cached_property
     def adjacency(self) -> np.ndarray:
@@ -36,6 +48,50 @@ class Graph(GraphCore):
         if self.eigvals is None or self.eigvecs is None:
             self.eigvals, self.eigvecs = ordered_eig(self.graph_laplacian)
         return self.eigvals, self.eigvecs
+
+    def cluster(
+        self, n: int, new_clustering: bool = False
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Perform spectral clustering of the graph nodes and return the indices of the
+        centroids of the clusters and the labels of the nodes.
+
+        Parameters:
+        - n (int): Number of clusters.
+        - new_clustering (bool): If True, the clusters are always recomputed.
+
+        Returns:
+        - tuple: Indices of the centroids of the clusters, labels of the data points.
+        """
+        if n <= 0 or n >= self.n_nodes:
+            raise ValueError(
+                f"Invalid number of clusters: {n}. Must be positive and less than {self.n_nodes}."
+            )
+
+        if self._should_return_previous_clusters(n, new_clustering):
+            return self.inds_centroids, self.labels
+
+        self.n_clusters = n
+        _, eigvecs = self.laplacian_eig()
+        self.inds_centroids, self.labels = spectral_clustering(eigvecs, n)
+        self._is_graph_clustered = True
+
+        return self.inds_centroids, self.labels
+
+    def _should_return_previous_clusters(self, n: int, new_clustering: bool) -> bool:
+        """Check if previous clusters should be returned based on current state and inputs."""
+        if self._is_graph_clustered:
+            if self.n_clusters is not None and n != self.n_clusters:
+                print(
+                    "UserWarning: Clusters have already been computed with a different 'n', recomputing..."
+                )
+            elif n == self.n_clusters and not new_clustering:
+                print(
+                    "Spectral clustering was already performed with the same number of clusters. "
+                    "Returning previous clusters."
+                )
+                return True
+        return False
 
     def __getitem__(self, idx: int) -> np.ndarray:
         return self.nodes[idx, ...]
@@ -58,9 +114,6 @@ class MultiFidelityModel:
     Methods:
     - transform(): Compute multi-fidelity data from low-fidelity graph.
     - fit_transform(): Fit omega and return the multi-fidelity data.
-    - cluster(): Perform spectral clustering of the low-fidelity graph.
-    - fit(): Fit the hyperparameters of the model.
-    - predict(): Predict the high-fidelity version of given low-fidelity data sample.
     - summary(): Print the model configuration.
     """
 
@@ -73,8 +126,6 @@ class MultiFidelityModel:
         "spectrum_cutoff",
         "tau",
         "omega",
-        "n_clusters",
-        "_is_graph_clustered",
     ]
 
     def __init__(
@@ -95,17 +146,16 @@ class MultiFidelityModel:
         self.spectrum_cutoff = spectrum_cutoff
         self.tau = tau
 
-        self.inds_centroids = None
-        self.labels = None
-        self.n_clusters = None
-        self._is_graph_clustered = False
         self._is_fit = False
         self.L_reg = None
 
         self._check_config()
 
     def transform(
-        self, g_LF: Graph, x_HF: np.ndarray, inds_train: list = None
+        self,
+        g_LF: Graph,
+        x_HF: np.ndarray,
+        inds_train: list,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Takes low-fidelity graph and high-fidelity data and returns multi-fidelity data.
@@ -114,19 +164,13 @@ class MultiFidelityModel:
         - g_LF (Graph): The low-fidelity graph.
         - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
         - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
-            in x_HF and the low-fidelity data contained in g_LF.nodes.
+            in x_HF and the low-fidelity data contained in g_LF.nodes. That is, x_HF[i] corresponds to
+            g_LF.nodes[inds_train[i]].
 
         Returns:
         - tuple: The computed multi-fidelity data and the uncertainty estimates.
         """
         assert g_LF.nodes.shape[1] == x_HF.shape[1], "Dimension mismatch."
-
-        if inds_train is None and self.inds_centroids is None:
-            raise ValueError(
-                "Indices that map the high-to-low-fidelity data must be provided."
-            )
-        elif inds_train is None:
-            inds_train = self.inds_centroids
 
         if len(inds_train) != x_HF.shape[0]:
             raise ValueError(
@@ -202,7 +246,7 @@ class MultiFidelityModel:
 
         L = g_LF.graph_laplacian
         if self.L_reg is None:
-            self.L_reg = self._compute_regularization(L)
+            self.L_reg = self._compute_regularized_laplacian(L)
 
         loss_history = []
         kappa_history = []
@@ -244,38 +288,28 @@ class MultiFidelityModel:
         self._is_fit = True
         return self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
 
-    def cluster(
-        self, g_LF: Graph, n: int, new_clustering: bool = False
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def summary(self, params_to_print: list = None) -> None:
         """
-        Perform spectral clustering of the low-fidelity graph and return the indices of the
-        centroids of the clusters and the labels of the data points.
+        Print the model configuration.
 
         Parameters:
-        - g_LF (Graph): The low-fidelity graph.
-        - n (int): Number of clusters.
-        - new_clustering (bool): If True, the clusters are always recomputed.
-
-        Returns:
-        - tuple: Indices of the centroids of the clusters, labels of the data points.
+        - params_to_print (list): List of parameters to print. Default is all parameters.
         """
-        if n <= 0 or n >= g_LF.n_nodes:
-            raise ValueError(
-                f"Invalid number of clusters: {n}. Must be positive and less than {g_LF.n_nodes})."
-            )
+        if params_to_print is None:
+            params_to_print = self._contained_params
 
-        if self.n_clusters and n != self.n_clusters:
-            print(
-                "UserWarning: Clusters have already been computed with a different 'n', recomputing..."
-            )
-        if n == self.n_clusters and not new_clustering:
-            return self.inds_centroids, self.labels
+        max_key_length = max(len(key) for key in params_to_print)
+        divider = "=" * 3 * max_key_length
 
-        self.n_clusters = n
-        _, eigvecs = g_LF.laplacian_eig()
-        self.inds_centroids, self.labels = spectral_clustering(eigvecs, n)
-        self._is_graph_clustered = True
-        return self.inds_centroids, self.labels
+        print(divider)
+        print("Model Configuration:")
+        print(divider)
+
+        for key, value in self.__dict__.items():
+            if key in params_to_print:
+                print(f"{key.ljust(max_key_length + 4)}: {value}")
+
+        print(divider)
 
     def _compute_specmf_data(
         self, g_LF: Graph, x_HF: np.ndarray, inds_train: list
@@ -290,7 +324,7 @@ class MultiFidelityModel:
         P_N[np.arange(n_HF), inds_train] = 1
 
         if self.L_reg is None:
-            self.L_reg = self._compute_regularization(L, n_LF)
+            self.L_reg = self._compute_regularized_laplacian(L, n_LF)
 
         B = (1 / self.sigma**2) * (P_N.T @ P_N) + self.omega * self.L_reg
 
@@ -333,7 +367,7 @@ class MultiFidelityModel:
         log_curvature = log_eigvals[:-2] + log_eigvals[2:] - 2 * log_eigvals[1:-1]
         return eigvals[np.argmin(log_curvature) + 1]
 
-    def _compute_regularization(self, L: np.ndarray):
+    def _compute_regularized_laplacian(self, L: np.ndarray):
         """Compute the regularized graph Laplacian."""
         return np.linalg.matrix_power(L + self.tau * np.eye(L.shape[0]), self.beta)
 
@@ -366,29 +400,6 @@ class MultiFidelityModel:
         )  # NOTE: np.sum(np.multiply(A.T, B), axis=0) == np.diag(A @ B)
         dkappa_dlogkappa = kappa
         return np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
-
-    def summary(self, params_to_print: list = None) -> None:
-        """
-        Print the model configuration.
-
-        Parameters:
-        - params_to_print (list): List of parameters to print. Default is all parameters.
-        """
-        if params_to_print is None:
-            params_to_print = self._contained_params
-
-        max_key_length = max(len(key) for key in params_to_print)
-        divider = "=" * 3 * max_key_length
-
-        print(divider)
-        print("Model Configuration:")
-        print(divider)
-
-        for key, value in self.__dict__.items():
-            if key in params_to_print:
-                print(f"{key.ljust(max_key_length + 4)}: {value}")
-
-        print(divider)
 
     def _check_config(self):
         if self.method not in ["full", "trunc"]:
