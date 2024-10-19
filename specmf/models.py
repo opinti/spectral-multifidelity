@@ -255,6 +255,7 @@ class MultiFidelityModel:
 
             # Compute the convariance matrix
             _kappa = np.exp(log_kappa)
+            kappa_history.append(_kappa)
             self.omega = _kappa / (self.tau**self.beta)
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
@@ -279,7 +280,6 @@ class MultiFidelityModel:
 
             # Store kappa history in the natural scale
             self.kappa = np.exp(log_kappa)
-            kappa_history.append(self.kappa)
 
         if verbose:
             print(f"\n---- Completed after {it + 1} iterations.")
