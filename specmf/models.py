@@ -79,18 +79,24 @@ class Graph(GraphCore):
         return self.inds_centroids, self.labels
 
     def _should_return_previous_clusters(self, n: int, new_clustering: bool) -> bool:
-        """Check if previous clusters should be returned based on current state and inputs."""
-        if self._is_graph_clustered:
-            if self.n_clusters is not None and n != self.n_clusters:
-                print(
-                    "UserWarning: Clusters have already been computed with a different 'n', recomputing..."
-                )
-            elif n == self.n_clusters and not new_clustering:
-                print(
-                    "Spectral clustering was already performed with the same number of clusters. "
-                    "Returning previous clusters."
-                )
-                return True
+        """
+        Determine if the previous clusters should be returned or if a new clustering needs to be performed.
+        """
+        if not self._is_graph_clustered:
+            return False
+
+        if n == self.n_clusters and not new_clustering:
+            print(
+                "Spectral clustering was already performed with the same number of clusters. "
+                "Returning previous clusters."
+            )
+            return True
+
+        if n != self.n_clusters:
+            print(
+                "UserWarning: Clusters have already been computed with a different 'n', recomputing..."
+            )
+
         return False
 
     def __getitem__(self, idx: int) -> np.ndarray:
