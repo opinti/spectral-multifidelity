@@ -330,7 +330,7 @@ class MultiFidelityModel:
         P_N[np.arange(n_HF), inds_train] = 1
 
         if self.L_reg is None:
-            self.L_reg = self._compute_regularized_laplacian(L, n_LF)
+            self.L_reg = self._compute_regularized_laplacian(L)
 
         B = (1 / self.sigma**2) * (P_N.T @ P_N) + self.omega * self.L_reg
 
