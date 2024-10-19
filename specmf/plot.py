@@ -86,10 +86,16 @@ def plot_cluster_size_hist(labels: np.ndarray) -> None:
     plt.tight_layout()
 
 
-def plot_loss_and_kappa(iterations, loss_history, kappa_history):
+def plot_loss_and_kappa(loss_history, kappa_history):
     """
     Plot loss history and kappa history on the same figure with two y-axes.
     """
+    assert len(loss_history) == len(
+        kappa_history
+    ), "Loss and kappa histories must have the same length."
+
+    iterations = np.arange(len(loss_history))
+
     fig, ax1 = plt.subplots(figsize=(8, 5))
 
     # Plot loss history
