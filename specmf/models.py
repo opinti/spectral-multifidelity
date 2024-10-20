@@ -292,7 +292,7 @@ class MultiFidelityModel:
             print(f"Final Loss: {loss}")
 
         self._is_fit = True
-        return self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
+        return *self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
 
     def summary(self, params_to_print: list = None) -> None:
         """
@@ -335,7 +335,7 @@ class MultiFidelityModel:
         B = (1 / self.sigma**2) * (P_N.T @ P_N) + self.omega * self.L_reg
 
         C_phi = solve(B, np.eye(n_LF))
-        Phi_mean = C_phi @ ((1 / self.sigma**2) * P_N.T @ Phi_hat)
+        Phi_mean = (1 / self.sigma**2) * C_phi @ P_N.T @ Phi_hat
 
         x_MF = x_LF + Phi_mean
         dPhi = np.sqrt(np.diag(C_phi) + self.REG_EPS)
