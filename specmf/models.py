@@ -248,33 +248,40 @@ class MultiFidelityModel:
             eigvals, _ = g_LF.laplacian_eig()
             self.tau = self._compute_spectral_gap(eigvals)
 
+        if self.kappa is None:
+            raise ValueError("Initial value for 'kappa' must be provided for fitting.")
+
         log_kappa = np.log(self.kappa)
 
         L = g_LF.graph_laplacian
         if self.L_reg is None:
             self.L_reg = self._compute_regularized_laplacian(L)
 
+        self.omega = None  # Reset omega so that it is recomputed
+
         loss_history = []
         kappa_history = []
 
         for it in range(maxiter):
 
+            # Update kappa and omega
+            self.kappa = np.exp(log_kappa)
+            self.omega = None  # Reset omega so that it is recomputed
+
             # Compute the convariance matrix
-            _kappa = np.exp(log_kappa)
-            kappa_history.append(_kappa)
-            self.omega = _kappa / (self.tau**self.beta)
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
-            # Compute the loss
+            # Compute loss and gradient
             loss = self._compute_loss(dPhi, r)
-            loss_history.append(loss)
+            grad = self._compute_gradient(dPhi, C, r)
 
-            # Compute the gradient
-            grad = self._compute_gradient(dPhi, C, _kappa, r)
+            # Store loss and kappa values
+            loss_history.append(loss)
+            kappa_history.append(self.kappa)
 
             if verbose:
                 print(
-                    f"Iteration: {it + 1}, Loss: {loss}, Gradient: {grad}, Kappa: {_kappa}"
+                    f"Iteration: {it + 1}, Loss: {loss}, Gradient: {grad}, Kappa: {self.kappa}"
                 )
 
             if it > 0 and (loss < ftol or abs(grad) < gtol):
@@ -283,9 +290,6 @@ class MultiFidelityModel:
             # Update kappa and step size
             log_kappa -= step_size * grad
             step_size *= step_decay_rate
-
-            # Store kappa history in the natural scale
-            self.kappa = np.exp(log_kappa)
 
         if verbose:
             print(f"\n---- Completed after {it + 1} iterations.")
@@ -388,23 +392,20 @@ class MultiFidelityModel:
         """
         return (np.mean(dPhi) - r * self.sigma) ** 2
 
-    def _compute_gradient(
-        self, dPhi: np.ndarray, C: np.ndarray, kappa: float, r: float
-    ):
+    def _compute_gradient(self, dPhi: np.ndarray, C: np.ndarray, r: float):
         """
         Compute the gradient of the loss with respect to log(kappa).
 
         Parameters:
         - dPhi (np.ndarray): Multi-fidelity estimates uncertainty.
         - C (np.ndarray): Multi-fidelity estimates covariance matrix.
-        - kappa (float): Regularization parameter.
         - r (float): The ratio of the mean multi-fidelity uncertainty to the high-fidelity noise level.
         """
         dloss_dC = (1 / dPhi.size) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
         dC_dkappa = -(1 / self.tau**self.beta) * np.sum(
             np.multiply(C.T, self.L_reg @ C), axis=0
         )  # NOTE: np.sum(np.multiply(A.T, B), axis=0) == np.diag(A @ B)
-        dkappa_dlogkappa = kappa
+        dkappa_dlogkappa = self.kappa
         return np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
 
     def _check_config(self):
