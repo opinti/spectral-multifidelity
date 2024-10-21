@@ -159,7 +159,9 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 #### 2.2 Use of `Graph` and `MultiFidelityModel`
 
-Let's now use a multi-fidelity model to transform the low-fidelity data based on a few high-fidelity data points. We instantiate a `Graph` with the low-fidelity data as nodes attributes. Thereafter, we pick 10 random indices and consider the corresponding high-fidelity data. This high-fidelity data, denoted as 'training data', will be used to update the low-fidelity graph.
+Let's now use a multi-fidelity model to transform the low-fidelity data based on a few high-fidelity data points.
+We instantiate a `Graph` with the low-fidelity data as nodes attributes. Thereafter, we pick 10 random indices and consider the corresponding high-fidelity data.
+This high-fidelity data, denoted as 'training data', will be used to update the low-fidelity graph.
 
 ```python
 ## Multi fidelity model
@@ -263,7 +265,9 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 ### 3. Spectral clustering
 
-The `Graph` class has also a built-in functionality to perform spectral clustering of the nodes. The idea is to embed each node in the graph Laplacian eigenfunction space, and then use a standard clustering technique, e.g. K-means. Here's an example of using the `cluster()` method:
+The `Graph` class has also a built-in functionality to perform spectral clustering of the nodes.
+This embeds each node in the graph Laplacian eigenfunction space, and then use a standard clustering technique, e.g. K-means.
+Here's an example of using the `cluster()` method:
 
 ```python
 ## Perform clustering on the graph to find the high-fidelity indices
@@ -292,7 +296,9 @@ Specifically, we determine the centroids of the clusters arising in the low-fide
 hf_data_train = hf_data[inds_centroids, :]
 ```
 
-Let's now use the model again with this new selection strategy. Further, we use the `fit_transform()` method of the `MultiFidelityModel` class. This computes the regularization strength parameter so that the multi-fiedlity estimates exhibit a specified level of uncertainty. The default is 3 times the high-fidelity noise/uncertainty.
+Let's now use the model again with this new selection strategy. Further, we use the `fit_transform()` method of the `MultiFidelityModel` class. 
+This computes the regularization strength parameter so that the multi-fidelity estimates exhibit a specified level of uncertainty. 
+The default is 3 times the high-fidelity noise/uncertainty.
 
 ```python
 ## Initialize the model
@@ -324,7 +330,11 @@ plot_loss_and_kappa(loss_history, kappa_history)
 
 ![Example Clustering](figures/example-kappa-loss-hist.png)
 
-Let's take a look at the results. We notice how the multi-fidelity data resulting from a high-fidelity data acquisition strategy based on clustering are closer to the "underlying truth", i.e. the high-fielity dataset (in red, on the right). Note that the model had only access to the high-fidelity data corresponding to the clusters centroids (shown on the left-most plot, "HF training data"). 
+##### Results
+
+Let's take a look at the results. We notice how the multi-fidelity data resulting from a high-fidelity data acquisition strategy based on
+clustering are closer to the "underlying truth", i.e. the high-fielity dataset (in red, on the right). Note that the model had only access
+to the high-fidelity data corresponding to the clusters centroids (shown on the left-most plot, "HF training data"). 
 
 ```python
 ## Plot results
@@ -366,7 +376,9 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 ### 4. Uncertainty Quantification
 
 The model provides also the variance of each multi-fidelity esimate, which can be interpreted as an uncertainty measure.
-We can visualize it for this simple 2-d example by coloring each data point based on the value of variance:
+We can visualize it for this simple 2-d example by coloring each data point based on the value of variance.
+As expected, the uncertainty is larger for points that are further from the training data (the red dots), and approaches
+the high-fidelity noise level (0.01) closer to them. 
 
 ```python
 ## Plot the variance of multi-fidelity esimates
