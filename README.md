@@ -392,11 +392,12 @@ spectral-multifidelity/
 ├── data/                  # Contains datasets for experiments
 ├── specmf/                # Main code
 │   ├── __init__.py        # Initialization file
-│   ├── models.py          # Contains model and graph classes
+│   ├── models.py          # Contains graph and model classes
 │   ├── preprocess.py      # Data preprocessing utilities
-│   ├── graph_core.py      # Core graph class
+│   ├── graph_core.py      # GraphCore class
 │   ├── utils.py           # Utility functions
-├── notebooks/             # Notebooks with experiments
+├── notebooks/             # Jupyter notebooks with examples and experiments
+│   └── experiments/       # Experiments with datasets in "data/"
 ├── tests/                 # Unit tests
 ├── setup.py               # Setup file for packaging
 ├── requirements.txt       # List of dependencies
