@@ -242,7 +242,7 @@ class MultiFidelityModel:
                 "Warning: Model has already been fitted. "
                 "Fitting will continue from the last state."
             )
-            print("\nTo start a new fitting, create a new instance of the model.")
+            print("To start a new fitting, create a new instance of the model.")
 
         if self.tau is None:
             eigvals, _ = g_LF.laplacian_eig()
@@ -253,10 +253,10 @@ class MultiFidelityModel:
 
         # Reset omega so that it is recomputed based on kappa
         if self.omega is not None:
+            self.omega = None
             print(
                 "Warning: Current value of 'omega' is reset to None prior to fitting."
             )
-        self.omega = None
 
         # Iniitialize log(kappa)
         log_kappa = np.log(self.kappa)
@@ -269,6 +269,10 @@ class MultiFidelityModel:
         kappa_history = []
 
         for it in range(maxiter):
+
+            # Update kappa and reset omega
+            self.kappa = np.exp(log_kappa)
+            self.omega = None
 
             # Compute the convariance matrix
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
@@ -292,10 +296,6 @@ class MultiFidelityModel:
             # Update log_kappa and step size
             log_kappa -= step_size * grad
             step_size *= step_decay_rate
-
-            # Update kappa and reset omega
-            self.kappa = np.exp(log_kappa)
-            self.omega = None
 
         if verbose:
             print(f"\n---- Completed after {it + 1} iterations.")
