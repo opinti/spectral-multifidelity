@@ -1,12 +1,12 @@
 beam:
   model_config:
     beta: 2
-    kappa: 6.743e-07
+    kappa: 6.742952e-07
     method: full
     sigma: 0.01
     spectrum_cutoff: null
   n_HF: 50
-cavity:
+cavity-flow:
   model_config:
     beta: 2
     kappa: 0.000385
@@ -22,7 +22,7 @@ darcy-flow:
     sigma: 0.01
     spectrum_cutoff: 1200
   n_HF: 120
-inclusion-field:
+elasticity-displacement:
   model_config:
     beta: 2
     kappa: 3.883e-09
@@ -30,7 +30,7 @@ inclusion-field:
     sigma: 0.01
     spectrum_cutoff: null
   n_HF: 100
-inclusion-qoi:
+elasticity-traction:
   model_config:
     beta: 2
     kappa: 0.03178
