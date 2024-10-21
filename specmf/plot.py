@@ -121,11 +121,11 @@ def plot_loss_and_kappa(loss_history, kappa_history):
 def plot_data(X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs) -> None:
     """Plot low-fidelity and high-fidelity data based on the dataset name."""
     plotters: Dict[str, Callable] = {
-        "inclusion-field": _plot_lf_hf_fields_samples,
+        "elasticity-displacement": _plot_lf_hf_fields_samples,
         "darcy-flow": _plot_lf_hf_fields_samples,
-        "inclusion-qoi": _plot_lf_hf_qoi_samples,
+        "elasticity-traction": _plot_lf_hf_qoi_samples,
         "beam": _plot_lf_hf_curves_samples,
-        "cavity": _plot_lf_hf_curves_samples,
+        "cavity-flow": _plot_lf_hf_curves_samples,
     }
 
     plot_func = plotters.get(dataset_name)
@@ -239,11 +239,11 @@ def plot_mf_comparison(
 ) -> None:
     """Plot multi-fidelity comparisons based on the dataset name."""
     plotters = {
-        "inclusion-field": _plot_mf_comparison_field,
+        "elasticity-displacement": _plot_mf_comparison_field,
         "darcy-flow": _plot_mf_comparison_field,
-        "inclusion-qoi": _plot_mf_comparison_qoi,
+        "elasticity-traction": _plot_mf_comparison_qoi,
         "beam": _plot_mf_comparison_curves,
-        "cavity": _plot_mf_comparison_curves,
+        "cavity-flow": _plot_mf_comparison_curves,
     }
 
     plot_func = plotters.get(dataset_name)

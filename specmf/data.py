@@ -26,11 +26,11 @@ def load_data(
     - tuple: Low- and high-fidelity data matrix X_LF and X_HF.
     """
     loaders = {
-        "inclusion-field": _inclusion_field_data,
+        "elasticity-displacement": _elasticity_displacement_data,
         "darcy-flow": _darcy_flow_data,
-        "inclusion-qoi": _inclusion_qoi_data,
+        "elasticity-traction": _elasticity_traction_data,
         "beam": _beam_data,
-        "cavity": _cavity_data,
+        "cavity-flow": _cavity_flow_data,
     }
 
     if dataset_name not in loaders:
@@ -78,10 +78,10 @@ def load_data(
 
 
 # Data loaders for different datasets
-def _inclusion_field_data() -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading inclusion fields data ...")
-    X_LF = np.load(os.path.join(data_path, "solid_inclusion/UY_LF.npy"))
-    X_HF = np.load(os.path.join(data_path, "solid_inclusion/UY_HF.npy"))
+def _elasticity_displacement_data() -> Tuple[np.ndarray, np.ndarray]:
+    print("Loading elasticity displacement data ...")
+    X_LF = np.load(os.path.join(data_path, "elasticity_displacement/UY_LF.npy"))
+    X_HF = np.load(os.path.join(data_path, "elasticity_displacement/UY_HF.npy"))
     # return preprocess_data(X_LF, X_HF)
     return X_LF, X_HF
 
@@ -94,10 +94,10 @@ def _darcy_flow_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF, X_HF
 
 
-def _inclusion_qoi_data() -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading inclusion QoIs data ...")
-    X_LF = np.load(os.path.join(data_path, "solid_inclusion_qoi/S22_LF.npy"))
-    X_HF = np.load(os.path.join(data_path, "solid_inclusion_qoi/S22_HF.npy"))
+def _elasticity_traction_data() -> Tuple[np.ndarray, np.ndarray]:
+    print("Loading elasticity traction data ...")
+    X_LF = np.load(os.path.join(data_path, "elasticity_traction/S22_LF.npy"))
+    X_HF = np.load(os.path.join(data_path, "elasticity_traction/S22_HF.npy"))
     X_LF = X_LF[:, np.newaxis, :]
     X_HF = X_HF[:, np.newaxis, :]
     return X_LF, X_HF
@@ -111,8 +111,8 @@ def _beam_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF[:, np.newaxis, :], X_HF[:, np.newaxis, :]
 
 
-def _cavity_data() -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading cavity data ...")
+def _cavity_flow_data() -> Tuple[np.ndarray, np.ndarray]:
+    print("Loading cavity flow data ...")
     data = np.load(os.path.join(data_path, "cavity/cavity-data.npz"))
     X_LF = data["cav_yL"].T
     X_HF = data["cav_yH"].T

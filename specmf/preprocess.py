@@ -141,9 +141,9 @@ def normalize_dataset(
     - Tuple: Normalized datasets and (optionally) normalization variables.
     """
     normalizers = {
-        "inclusion-field": _normalize_inclusion_field,
+        "elasticity-displacement": _normalize_elasticity_displacement,
         "darcy-flow": _normalize_darcy_flow,
-        "inclusion-qoi": _normalize_inclusion_qoi,
+        "elasticity-traction": _normalize_elasticity_traction,
     }
 
     if dataset_name not in normalizers:
@@ -154,11 +154,11 @@ def normalize_dataset(
     return normalizers[dataset_name](X_LF, X_HF, return_normalization_vars)
 
 
-def _normalize_inclusion_field(
+def _normalize_elasticity_displacement(
     X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
 ) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
     """
-    Normalize 'inclusion-field' dataset.
+    Normalize 'elasticity-displacement' dataset.
     """
     n_dim = X_LF.shape[1]
     UY_mean = np.linspace(0, np.mean(X_LF[-1], axis=0), n_dim)[:, np.newaxis, :]
@@ -197,11 +197,11 @@ def _normalize_darcy_flow(
     return X_LF, X_HF
 
 
-def _normalize_inclusion_qoi(
+def _normalize_elasticity_traction(
     X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
 ) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
     """
-    Normalize the inclusion QoI dataset, reshaped to 3D for compatibility.
+    Normalize 'elasticity-traction' dataset, reshaped to 3D for compatibility.
 
     Parameters:
     - X_LF (np.ndarray): Low-fidelity data matrix.
@@ -212,14 +212,14 @@ def _normalize_inclusion_qoi(
     """
 
     def _generate_inclusion_qoi(X: np.ndarray) -> np.ndarray:
-        snap_dim = 4
-        step = X.shape[0] // snap_dim
+        out_dim = 4
+        step = X.shape[0] // out_dim
         U = np.array(
             [
                 np.trapz(
                     X[i * step : (i + 1) * step, :], dx=0.001, axis=0  # noqa: E203
                 )
-                for i in range(snap_dim)
+                for i in range(out_dim)
             ]
         )
         U = np.vstack((U, np.max(X, axis=0)))
