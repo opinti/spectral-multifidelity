@@ -69,7 +69,7 @@ def error_analysis(
     x_hf,
     component_wise: bool = False,
     return_values: bool = False,
-    verbose: bool = False,
+    verbose: bool = True,
 ) -> Union[None, Tuple[np.ndarray, np.ndarray]]:
     """
     Compute the relative error of low- and multi-fidelity data, with respect
