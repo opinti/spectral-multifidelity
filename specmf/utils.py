@@ -69,7 +69,7 @@ def error_analysis(
     x_hf,
     component_wise: bool = False,
     return_values: bool = False,
-    verbose: int = 1,
+    verbose: bool = False,
 ) -> Union[None, Tuple[np.ndarray, np.ndarray]]:
     """
     Compute the relative error of low- and multi-fidelity data, with respect
@@ -80,9 +80,11 @@ def error_analysis(
     - x_mf (numpy.ndarray): Multi-fidelity data of shape (n_points, n_dim).
     - x_hf (numpy.ndarray): High-fidelity data of shape (n_points, n_dim).
     - component_wise (bool): If True, compute component-wise error.
+    - return_values (bool): If True, return the computed errors.
+    - verbose (bool): If True, print the computed errors.
     """
     if component_wise:
-        if verbose > 0:
+        if verbose:
             print("Component-wise mean relative l2 errors and Improvement Factor (IF)")
             print("-------------------------------------------------------------------")
         e_lf = (
@@ -92,7 +94,7 @@ def error_analysis(
             100 * np.mean(np.abs(x_mf - x_hf), axis=0) / np.mean(np.abs(x_hf), axis=0)
         )
     else:
-        if verbose > 0:
+        if verbose:
             print("Mean relative l2 errors and Improvement Factor (IF)")
             print("----------------------------------------------------")
         e_lf = (
@@ -106,7 +108,7 @@ def error_analysis(
             / np.mean(np.linalg.norm(x_hf, axis=1))
         )
 
-    if verbose > 0:
+    if verbose:
         print(f"Error LF:         {np.round(e_lf, 2)}")
         print(f"Error MF:         {np.round(e_mf, 2)}")
         print(f"Percentage drop:  {np.round(100 * (e_lf - e_mf) / e_lf, 2)}%")
