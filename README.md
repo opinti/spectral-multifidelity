@@ -159,7 +159,7 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 #### 2.2 Use of `Graph` and `MultiFidelityModel`
 
-Let's now use a multi-fidelity model to transform the graph's nodes. We instantiate a `Graph` with the low-fidelity data as nodes attributes. Thereafter, we pick 10 random indices and consider the corresponding high-fidelity data. This data will be used to update the low-fidelity graph.
+Let's now use a multi-fidelity model to transform the low-fidelity data based on a few high-fidelity data points. We instantiate a `Graph` with the low-fidelity data as nodes attributes. Thereafter, we pick 10 random indices and consider the corresponding high-fidelity data. This high-fidelity data, denoted as 'training data', will be used to update the low-fidelity graph.
 
 ```python
 ## Multi fidelity model
