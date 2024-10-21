@@ -3,6 +3,7 @@ _data/
 .DS_Store
 specmf/__pycache__/
 tests/__pycache__/
+notebooks/eigen-truncation-analysis.ipynb
 
 data/*
 !data/beam/
