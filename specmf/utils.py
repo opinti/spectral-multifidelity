@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Tuple, Union
 from sklearn.cluster import KMeans
 import yaml
+import logging
 
 
 def ordered_eig(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -73,6 +74,7 @@ def error_analysis(
     """
     Compute the relative error of low- and multi-fidelity data, with respect
     to referece and high-fidelity data.
+
     Parameters:
     - x_lf (numpy.ndarray): Low-fidelity data of shape (n_points, n_dim).
     - x_mf (numpy.ndarray): Multi-fidelity data of shape (n_points, n_dim).
@@ -113,14 +115,38 @@ def error_analysis(
         return e_lf, e_mf
 
 
-def load_model_config(config_path, dataset_name):
+def load_model_config(config_path: str, dataset_name: str, return_n_HF: bool = False):
     """
     Load model configuration from a YAML file.
+
+    Parameters:
+    - config_path (str): Path to the YAML configuration file.
+    - dataset_name (str): Name of the dataset to fetch the configuration for.
+    - return_n_HF (bool): Flag indicating if n_HF should be returned. Default is False.
+
+    Returns:
+        dict or tuple: Model configuration, optionally with n_HF if return_n_HF is True.
     """
     try:
         with open(config_path, "r") as file:
-            MODEL_CONFIG = yaml.safe_load(file)
-        return MODEL_CONFIG[dataset_name]["model_config"]
+            model_config_data = yaml.safe_load(file)
+
+        if dataset_name not in model_config_data:
+            raise KeyError(
+                f"Dataset '{dataset_name}' not found in the configuration file."
+            )
+
+        model_config = model_config_data[dataset_name].get("model_config")
+
+        if return_n_HF:
+            n_HF = model_config_data[dataset_name].get("n_HF", None)
+            return model_config, n_HF
+
+        return model_config
+
     except FileNotFoundError:
-        print(f"File not found at {config_path}.")
-        return None
+        logging.error(f"Configuration file not found at {config_path}.")
+        raise
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        raise
