@@ -216,7 +216,7 @@ class MultiFidelityModel:
         Note:
             Loss function: (mean(dPhi) - * r * sigma)^2
         Note:
-            Search is performed in the log-space.
+            Searchof kappa is performed in log-space.
 
         Parameters:
         - g_LF (Graph): The low-fidelity graph.
@@ -251,22 +251,24 @@ class MultiFidelityModel:
         if self.kappa is None:
             raise ValueError("Initial value for 'kappa' must be provided for fitting.")
 
+        # Reset omega so that it is recomputed based on kappa
+        if self.omega is not None:
+            print(
+                "Warning: Current value of 'omega' is reset to None prior to fitting."
+            )
+        self.omega = None
+
+        # Iniitialize log(kappa)
         log_kappa = np.log(self.kappa)
 
         L = g_LF.graph_laplacian
         if self.L_reg is None:
             self.L_reg = self._compute_regularized_laplacian(L)
 
-        self.omega = None  # Reset omega so that it is recomputed
-
         loss_history = []
         kappa_history = []
 
         for it in range(maxiter):
-
-            # Update kappa and omega
-            self.kappa = np.exp(log_kappa)
-            self.omega = None  # Reset omega so that it is recomputed
 
             # Compute the convariance matrix
             _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
@@ -287,9 +289,13 @@ class MultiFidelityModel:
             if it > 0 and (loss < ftol or abs(grad) < gtol):
                 break
 
-            # Update kappa and step size
+            # Update log_kappa and step size
             log_kappa -= step_size * grad
             step_size *= step_decay_rate
+
+            # Update kappa and reset omega
+            self.kappa = np.exp(log_kappa)
+            self.omega = None
 
         if verbose:
             print(f"\n---- Completed after {it + 1} iterations.")
