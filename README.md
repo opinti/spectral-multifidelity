@@ -55,7 +55,7 @@ The main module of the package is `models.py`. Below are examples demonstrating 
 ### 1. Using the `Graph` class
 
 The `Graph` class inherhits from `GraphCore` class, which computes graph-based representations, such as the adjacency matrix and the normalized graph Laplacian. 
-Here is an example of how to initialize an instance of the class and compute standard matrix representations such as adjacency and graph Laplacian matrix.
+Here is an example of how to initialize an instance of the class and compute graph's representation matrices based on the nodes attributes.
 
 ```python
 import numpy as np
@@ -81,7 +81,7 @@ print(f"{graph_laplacian.shape=}")
 ### 2. Using the `MultiFidelityModel` class
 
 The `MultiFidelityModel` class is designed to perform multi-fidelity modeling. 
-It allows you to transform all nodes of a graph based on a few more accurate nodes data, i.e. the "high-fidelity" data.
+It allows to transform all nodes of a graph based on a few more accurate nodes data, i.e. the "high-fidelity" data.
 
 
 #### 2.1 Generate some synthetic data
@@ -160,10 +160,10 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 #### 2.2 Use of `MultiFidelityModel`
 
 Let's now use a multi-fidelity model to transform the low-fidelity data based on a few high-fidelity data points.
-We pick 10 random indices and consider the corresponding high-fidelity data; this data, denoted as 'training data', will be used to update the low-fidelity graph.
-Thereafter, we instantiate a `Graph` with the low-fidelity data as nodes attributes.
-Finally, we use the `tranform()` method of the `MultiFidelityModel()` class to update the graph nodes.
-This method used the `n_hf=10` low- and high-fidelity data pairs to derive a transformation for all nodes (`n_la=1000`).
+We pick 10 random indices and consider the corresponding high-fidelity data. This data is denoted as 'training data', and will be used to update the full low-fidelity graph.
+To do that, we instantiate a `Graph` with the low-fidelity data as nodes attributes.
+Thereafter, we use the `tranform()` method of the `MultiFidelityModel()` class to update the graph nodes.
+This method uses the low- and high-fidelity data pairs to derive a transformation for all nodes.
 We use the default configuration for the model instance, except for the training data noise level, which is set based on the known or assumed noise of the high-fidelity data (`noise_scale_hf`). 
 After the transformation is computed and applied, we print a summary of the model configuration and parameters.
 
@@ -201,7 +201,7 @@ model_config = {
 model = MultiFidelityModel(**model_config)
 
 # Compute multi-fidelity data
-mf_data, mf_covar_mat, mf_var = model.transform(
+mf_data, mf_covar_mat, mf_std = model.transform(
     graph_lf,
     hf_data_train,
     hf_train_inds,
@@ -227,7 +227,7 @@ tau                : 0.0012819419490994527
 
 #### 2.3 Visualize the results
 
-We can now plot the low- and high-fidleity data, together with the new multi-fidelity estimates:
+We can now plot the low- and high-fidelity data, together with the new multi-fidelity estimates:
 
 ```python
 ## Plot results
@@ -269,8 +269,8 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 ### 3. High-fidelity data acquisition policy
 
-The method uses a small number of low- and high-fielity data paris to update all low-fidelity data.
-In the example above we picked random pairs, but we can define strategies that are more effective. 
+The method uses a small number of low- and high-fielity data pairs to update all low-fidelity data.
+In the example above we picked random pairs, but we can design more effective strategies. 
 For example, we can cluster the low-fidelity data and decide to 'acquire' high-fidelity data corresponding to the centroids of the clusters.
 This will make sure that the acquired high-fidelity data cover the whole graph more uniformly, and that if the graph has specific structures,
 these will be preserved better and carried over the multi-fidelity estimates.
@@ -279,7 +279,7 @@ these will be preserved better and carried over the multi-fidelity estimates.
 
 The `Graph` class has a built-in `cluster()` method to perform spectral clustering of the nodes.
 The idea is embedding the nodes in the graph Laplacian eigenfunction space, and then use a standard clustering technique, e.g. K-means.
-This method returns the indices of the clusters centroids and the labels of all nodes.
+This method returns the indices of the clusters centroids and the cluster label of all nodes.
 
 Here's an example of usage of the `cluster()` method:
 
@@ -303,7 +303,7 @@ ax.grid(True)
 #### 3.1 Use of the `fit_transform()` method
 
 We leverage the graph clustering above to a decide which high-fidelity data to acquire.
-Specifically, we select the high-fidelity data that correspond to the centroids of the low-fidelity graph's clusters. That is,
+Specifically, we select the high-fidelity data that corresponds to the centroids of the low-fidelity graph's clusters. That is,
 
 ```python
 ## Aquire high-fidelity data at the centroids location
@@ -312,7 +312,7 @@ hf_data_train = hf_data[inds_centroids, :]
 
 Let's now use the model again with this new selection strategy.
 Further, to compute the transformation we use the `fit_transform()` method of the `MultiFidelityModel` class. 
-This finds the regularization strength parameter `kappa` that results to a specified average level of uncertainty of the multi-fidelity estimates.
+This finds the regularization strength parameter `kappa` that results in a specified mean level of uncertainty of the multi-fidelity estimates (`mf_std`).
 This is done by specifing the multi-to-high-fidelity uncertainty ratio `r`, whose default velue is 3.
 
 ```python
@@ -325,7 +325,7 @@ model = MultiFidelityModel(**model_config)
 ## Fit and transform to get multi-fidelity data
 # This will find the value of hyperparameter kappa that leads to given level of uncertainty 
 # in the multi-fidelity estimates.
-mf_data, mf_covar_mat, mf_var, loss_history, kappa_history = model.fit_transform(
+mf_data, mf_covar_mat, mf_std, loss_history, kappa_history = model.fit_transform(
     graph_lf,
     hf_data_train,
     inds_centroids,
@@ -349,7 +349,7 @@ plot_loss_and_kappa(loss_history, kappa_history)
 
 Let's take a look at the results obtained with a high-fidelity data acquisition strategy based on clustering.
 We notice how in this case the multi-fidelity data (in blue, in the center figure) are closer to the "underlying truth", i.e. the high-fidelity dataset (in red, on the right).
-Note that the model had only access to the high-fidelity data corresponding to the clusters centroids (shown on the left-most plot, "HF training data"). 
+Note that the model had only access to the high-fidelity data corresponding to the clusters centroids (shown in the left-most plot, "HF training data"). 
 
 ```python
 ## Plot results
@@ -390,17 +390,17 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 ### 4. Uncertainty Quantification
 
-The model provides also the variance of each multi-fidelity esimate, which can be interpreted as an uncertainty measure.
+The model provides also the standard deviation of each multi-fidelity esimate, which can be interpreted as an uncertainty measure.
 We can visualize it for this simple 2-d example by coloring each data point based on the value of variance.
 As expected, the uncertainty is larger for points that are further from the training data (the red dots), and approaches
 the high-fidelity noise level (0.01) closer to them. 
 
 ```python
-## Plot the variance of multi-fidelity esimates
+## Plot the standard deviation of multi-fidelity esimates
 fig, ax = plt.subplots(1, 1, figsize=(7, 6))
-scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_var, s=20,)
+scatter = ax.scatter(mf_data[:, 0], mf_data[:, 1], c=mf_std, s=20,)
 ax.scatter(mf_data[inds_centroids, 0], mf_data[inds_centroids, 1], c='red', s=50, label='HF training data')
-ax.set_title("Variance of multi-fidelity estimates", fontsize=16)
+ax.set_title("Standard deviation of multi-fidelity estimates", fontsize=16)
 ax.set_xlabel(r"$u_1$", fontsize=16)
 ax.set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 fig.colorbar(scatter, ax=ax,)
