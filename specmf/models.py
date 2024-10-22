@@ -210,11 +210,12 @@ class MultiFidelityModel:
         verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Find the hyperparameter kappa such that the ration between the mean uncertainty of the mutli-fideloity
-        estimates and the noise level of the high-fidelity data is equal to r. Then, return the multi-fidelity data.
+        Find the hyperparameter kappa such that the ratio between the mean uncertainty of the multi-fidelity
+        estimates and the noise level of the high-fidelity data is equal to a specified value.
+        Then, return the multi-fidelity data.
 
         Note:
-            Loss function: (mean(dPhi) - * r * sigma)^2
+            Loss function: (mean(var_mf) - * r * noise_hf)^2
         Note:
             Searchof kappa is performed in log-space.
 
@@ -223,7 +224,7 @@ class MultiFidelityModel:
         - x_HF (np.ndarray): The high-fidelity data (N-samples_HF, n_features).
         - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
             in x_HF and the low-fidelity data contained in g_LF.nodes.
-        - r (float): The ratio of the mean multi-fidelity uncertainty to the high-fidelity noise level.
+        - r (float): The ratio between the mean multi-fidelity uncertainty and the high-fidelity noise level.
         - maxiter (int): Maximum number of iterations.
         - step_size (float): Initial step size for the optimization.
         - step_decay_rate (float): Rate at which the step size decays.
