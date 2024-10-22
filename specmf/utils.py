@@ -119,8 +119,8 @@ def error_analysis(
         suptitle = f"{error_label} relative L2 errors and percentage error drop"
         print(suptitle)
         print("-" * len(suptitle))
-        print(f"Error LF:         {np.round(error_lf, 2)}")
-        print(f"Error MF:         {np.round(error_mf, 2)}")
+        print(f"Error LF:  {np.round(error_lf, 2)}")
+        print(f"Error MF:  {np.round(error_mf, 2)}")
         print(f"[%] drop:  {np.round(100 * (error_lf - error_mf) / error_lf, 2)}")
 
     if return_values:
