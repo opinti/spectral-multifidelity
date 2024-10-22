@@ -217,7 +217,7 @@ class MultiFidelityModel:
         Note:
             Loss function: (mean(var_mf) - * r * noise_hf)^2
         Note:
-            Searchof kappa is performed in log-space.
+            Search of kappa is performed in log-space.
 
         Parameters:
         - g_LF (Graph): The low-fidelity graph.
