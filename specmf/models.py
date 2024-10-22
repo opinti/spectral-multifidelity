@@ -250,12 +250,15 @@ class MultiFidelityModel:
         if self.kappa is None:
             raise ValueError("Initial value for 'kappa' must be provided for fitting.")
 
-        # Reset omega so that it is recomputed based on kappa
         if self.omega is not None:
             raise ValueError(
-                "Parameter 'omega' is not None. Fitting would override the current value of 'omega'. "
+                "Parameter 'omega' is not None; fitting would override the current value of 'omega'. "
                 "Reset 'omega' to None to use the fitting method."
             )
+
+        if self.tau is None:
+            eigvals, _ = g_LF.laplacian_eig()
+            self.tau = self._compute_spectral_gap(eigvals)
 
         if self.regularized_laplacian is None:
             self.regularized_laplacian = self._compute_regularized_laplacian(
