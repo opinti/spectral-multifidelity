@@ -108,12 +108,14 @@ class Graph(GraphCore):
 
 class MultiFidelityModel:
     """
-    MultiFidelityModel is a class that performs multi-fidelity modeling using specMF method.
+    MultiFidelityModel class performs multi-fidelity modeling using specMF method.
 
     Parameters:
     - sigma (float): Noise level of high-fidelity data. Default is 1e-2.
-    - beta (int): The parameter controlling the regularization of the graph Laplacian. Default is 2.
-    - kappa (float): The parameter controlling the fidelity of the high-fidelity data. Default is 1e-3.
+    - beta (int): Regularization exponent. Controls the smoothness of the correction applied to the low-fidelity data
+        to obtain the multi-fidelity data. Higher values lead to smoother solutions. Default is 2.
+    - kappa (float): Regularization strength. Controls the weight of the prior with respect to the likelihood in the
+        Bayesian update used to compute the multi-fidelity data. Default is 1e-3.
     - method (str): SpecMF variation to computing multi-fidelity data. Can be 'full' or 'trunc'. Default is 'full'.
     - spectrum_cutoff (bool): Number of eigenvectors used if method is 'trunc'.
 
@@ -241,9 +243,9 @@ class MultiFidelityModel:
         if self._is_fit:
             print(
                 "Warning: Model has already been fitted. "
-                "Fitting will continue from the last state."
+                "Fitting will continue from the last state. "
+                "To start a new fitting, reset the 'kappa' parameter, or create a new instance of the model."
             )
-            print("To start a new fitting, create a new instance of the model.")
 
         if self.tau is None:
             eigvals, _ = g_LF.laplacian_eig()
@@ -254,9 +256,9 @@ class MultiFidelityModel:
 
         # Reset omega so that it is recomputed based on kappa
         if self.omega is not None:
-            self.omega = None
-            print(
-                "Warning: Current value of 'omega' is reset to None prior to fitting."
+            raise ValueError(
+                "Parameter 'omega' is not None. Fitting would override the current value of 'omega'. "
+                "Reset 'omega' to None to use the fitting method."
             )
 
         # Iniitialize log(kappa)
@@ -276,7 +278,7 @@ class MultiFidelityModel:
             self.omega = None
 
             # Compute the convariance matrix
-            _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
+            x_MF, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
             # Compute loss and gradient
             loss = self._compute_loss(dPhi, r)
@@ -303,7 +305,7 @@ class MultiFidelityModel:
             print(f"Final Loss: {loss}")
 
         self._is_fit = True
-        return *self.transform(g_LF, x_HF, inds_train), loss_history, kappa_history
+        return x_MF, C, dPhi, loss_history, kappa_history
 
     def summary(self, params_to_print: list = None) -> None:
         """
@@ -331,7 +333,18 @@ class MultiFidelityModel:
     def _compute_specmf_data(
         self, g_LF: Graph, x_HF: np.ndarray, inds_train: list
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Compute multi-fidelity data using standard specMF method."""
+        """Compute multi-fidelity data using standard specMF method.
+
+        Parameters:
+        - g_LF (Graph): The low-fidelity graph with nodes of shape (n_samples_LF, n_features).
+        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
+        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
+
+        Returns:
+        - np.ndarray: Multi-fidelity data (n_samples_LF, n_features).
+        - np.ndarray: Covariance matrix of the multi-fidelity data.
+        - np.ndarray: Standard deviation of the multi-fidelity estimates.
+        """
         x_LF = g_LF.nodes
         L = g_LF.graph_laplacian
 
@@ -356,7 +369,23 @@ class MultiFidelityModel:
     def _compute_specmf_data_trunc(
         self, g_LF: Graph, x_HF: np.ndarray, inds_train: list
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Compute multi-fidelity data using truncated specMF method."""
+        """Compute multi-fidelity data using truncated specMF method.
+
+        Parameters:
+        - g_LF (Graph): The low-fidelity graph with nodes of shape (n_samples_LF, n_features).
+        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
+        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
+
+        Returns:
+        - np.ndarray: Multi-fidelity data (n_samples_LF, n_features).
+        - np.ndarray: Covariance matrix of the multi-fidelity data.
+        - np.ndarray: Standard deviation of the multi-fidelity estimates.
+
+        Note:
+            The truncated method expresses the multi-fidelity corrections as a linear combination of the
+            low-lying eigenvectors of the graph Laplacian. The number of eigenvectors used is controlled
+            by the parameter 'spectrum_cutoff'.
+        """
         x_LF = g_LF.nodes
         eigvals, eigvecs = g_LF.laplacian_eig()
 
@@ -378,7 +407,14 @@ class MultiFidelityModel:
         return x_MF, C_phi, dPhi
 
     def _compute_spectral_gap(self, eigvals: np.ndarray) -> float:
-        """Compute spectral gap for tau estimation."""
+        """Compute spectral gap for tau estimation.
+
+        Parameters:
+        - eigvals (np.ndarray): Eigenvalues of the graph Laplacian.
+
+        Returns:
+        - float: The eigenvalue corresponding to the highest curvature of the spectrum in log-scale.
+        """
         eigvals_ = np.abs(eigvals[:50])
         log_eigvals = np.log10(eigvals_)
         log_curvature = log_eigvals[:-2] + log_eigvals[2:] - 2 * log_eigvals[1:-1]
