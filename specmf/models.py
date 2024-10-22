@@ -155,7 +155,7 @@ class MultiFidelityModel:
         self.tau = tau
 
         self._is_fit = False
-        self.L_reg = None
+        self.regularized_laplacian = None
 
         self._check_config()
 
@@ -247,10 +247,6 @@ class MultiFidelityModel:
                 "To start a new fitting, reset the 'kappa' parameter, or create a new instance of the model."
             )
 
-        if self.tau is None:
-            eigvals, _ = g_LF.laplacian_eig()
-            self.tau = self._compute_spectral_gap(eigvals)
-
         if self.kappa is None:
             raise ValueError("Initial value for 'kappa' must be provided for fitting.")
 
@@ -261,12 +257,13 @@ class MultiFidelityModel:
                 "Reset 'omega' to None to use the fitting method."
             )
 
+        if self.regularized_laplacian is None:
+            self.regularized_laplacian = self._compute_regularized_laplacian(
+                g_LF.graph_laplacian
+            )
+
         # Iniitialize log(kappa)
         log_kappa = np.log(self.kappa)
-
-        L = g_LF.graph_laplacian
-        if self.L_reg is None:
-            self.L_reg = self._compute_regularized_laplacian(L)
 
         loss_history = []
         kappa_history = []
@@ -346,17 +343,20 @@ class MultiFidelityModel:
         - np.ndarray: Standard deviation of the multi-fidelity estimates.
         """
         x_LF = g_LF.nodes
-        L = g_LF.graph_laplacian
 
         n_LF, n_HF = x_LF.shape[0], len(inds_train)
         Phi_hat = x_HF - x_LF[inds_train, :]
         P_N = np.zeros((n_HF, n_LF))
         P_N[np.arange(n_HF), inds_train] = 1
 
-        if self.L_reg is None:
-            self.L_reg = self._compute_regularized_laplacian(L)
+        if self.regularized_laplacian is None:
+            self.regularized_laplacian = self._compute_regularized_laplacian(
+                g_LF.graph_laplacian
+            )
 
-        B = (1 / self.sigma**2) * (P_N.T @ P_N) + self.omega * self.L_reg
+        B = (1 / self.sigma**2) * (
+            P_N.T @ P_N
+        ) + self.omega * self.regularized_laplacian
 
         C_phi = solve(B, np.eye(n_LF))
         Phi_mean = (1 / self.sigma**2) * C_phi @ P_N.T @ Phi_hat
@@ -446,7 +446,7 @@ class MultiFidelityModel:
         """
         dloss_dC = (1 / dPhi.size) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
         dC_dkappa = -(1 / self.tau**self.beta) * np.sum(
-            np.multiply(C.T, self.L_reg @ C), axis=0
+            np.multiply(C.T, self.regularized_laplacian @ C), axis=0
         )  # NOTE: np.sum(np.multiply(A.T, B), axis=0) == np.diag(A @ B)
         dkappa_dlogkappa = self.kappa
         return np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
