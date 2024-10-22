@@ -342,7 +342,7 @@ Let’s examine the results obtained with with a high-fidelity data acquisition 
 In this case, the multi-fidelity data (shown in green, in the center figure) are much closer to the "underlying truth", i.e. the high-fidelity dataset (in red, on the right).
 It’s important to note that the model only had access to the high-fidelity data corresponding to the clusters centroids (shown in the left-most plot as "HF training data").
 
-![Example-2](figures/example-transition.png)
+![Example-2](figures/example-transition.gif)
 
 ### 4. Uncertainty Quantification
 
