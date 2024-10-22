@@ -4,7 +4,7 @@ import os
 from typing import Tuple
 from specmf.preprocess import preprocess_data, normalize_dataset, flatten_datasets
 
-data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/")
+_data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/")
 
 
 # Data loading
@@ -15,12 +15,20 @@ def load_data(
     flatten: bool = True,
     return_normalization_vars: bool = False,
     return_mask: bool = False,
+    data_path: str = _data_path,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Load dataset specified by dataset_name.
 
     Parameters:
     - dataset_name (str): Name of the dataset to load.
+    - preprocess (bool): Whether to preprocess the data. Preprocessing functions live in specmf.preprocess module.
+    - normalize (bool): Whether to normalize the data. Normalization functions live in specmf.preprocess module.
+    - flatten (bool): Whether to flatten the data. Flattening functions live in specmf.preprocess module.
+    - return_normalization_vars (bool): Whether to return normalization variables, e.g. mean and scale.
+    - return_mask (bool): Whether to return mask computed during preprocessing;
+        if applied to the data, it masks out NaNs, infs, and duplicates.
+    - data_path (str): Path to the data directory. Default is "*/spectral-multifidelity/data/".
 
     Returns:
     - tuple: Low- and high-fidelity data matrix X_LF and X_HF.
@@ -38,7 +46,7 @@ def load_data(
             f"Invalid dataset name. Expected one of {loaders.keys()}, got {dataset_name} instead."
         )
 
-    X_LF, X_HF = loaders[dataset_name]()
+    X_LF, X_HF = loaders[dataset_name](data_path)
     if X_LF.ndim != X_HF.ndim:
         raise ValueError(
             f"Data matrices must have the same dimensions, got {X_LF.ndim} and {X_HF.ndim}."
@@ -78,7 +86,7 @@ def load_data(
 
 
 # Data loaders for different datasets
-def _elasticity_displacement_data() -> Tuple[np.ndarray, np.ndarray]:
+def _elasticity_displacement_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
     print("Loading elasticity displacement data ...")
     X_LF = np.load(os.path.join(data_path, "elasticity_displacement/UY_LF.npy"))
     X_HF = np.load(os.path.join(data_path, "elasticity_displacement/UY_HF.npy"))
@@ -86,7 +94,7 @@ def _elasticity_displacement_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF, X_HF
 
 
-def _darcy_flow_data() -> Tuple[np.ndarray, np.ndarray]:
+def _darcy_flow_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
     print("Loading Darcy flow data ...")
     X_LF = np.load(os.path.join(data_path, "darcy/X_LF.npy"))
     X_HF = np.load(os.path.join(data_path, "darcy/X_HF.npy"))
@@ -94,7 +102,7 @@ def _darcy_flow_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF, X_HF
 
 
-def _elasticity_traction_data() -> Tuple[np.ndarray, np.ndarray]:
+def _elasticity_traction_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
     print("Loading elasticity traction data ...")
     X_LF = np.load(os.path.join(data_path, "elasticity_traction/S22_LF.npy"))
     X_HF = np.load(os.path.join(data_path, "elasticity_traction/S22_HF.npy"))
@@ -103,7 +111,7 @@ def _elasticity_traction_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF, X_HF
 
 
-def _beam_data() -> Tuple[np.ndarray, np.ndarray]:
+def _beam_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
     print("Loading beam data ...")
     data = np.load(os.path.join(data_path, "beam/beam-data.npz"))
     X_LF = data["beam_yL"].T
@@ -111,7 +119,7 @@ def _beam_data() -> Tuple[np.ndarray, np.ndarray]:
     return X_LF[:, np.newaxis, :], X_HF[:, np.newaxis, :]
 
 
-def _cavity_flow_data() -> Tuple[np.ndarray, np.ndarray]:
+def _cavity_flow_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
     print("Loading cavity flow data ...")
     data = np.load(os.path.join(data_path, "cavity/cavity-data.npz"))
     X_LF = data["cav_yL"].T
