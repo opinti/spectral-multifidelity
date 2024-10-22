@@ -9,9 +9,9 @@ A python package for graph laplacian-based multi-fidelity modeling.
 ## Features
 
 - Perform multi-fidelity modeling using Bayesian specmf method.
-- Simple custom `Graph` class to store graphs representations and perform spectral clustering.
+- Custom `Graph` class for computing graph representations and performing spectral clustering.
 - Modeling computations happen in a dedicated `MultiFidelityModel` class.
-- Utilities for preprocessing and visualize data for multi-fidelity modeling.
+- Utilities for preprocessing and visualize data in the context of multi-fidelity modeling.
 - Includes several experiments for testing the models.
 
 ## Installation
@@ -81,8 +81,7 @@ print(f"{graph_laplacian.shape=}")
 ### 2. Using the `MultiFidelityModel` class
 
 The `MultiFidelityModel` class is designed to perform multi-fidelity modeling. 
-It allows to transform all nodes of a graph based on a few more accurate nodes data, i.e. the "high-fidelity" data.
-
+It transforms all nodes of a graph using a subset of more accurate high-fidelity data.
 
 #### 2.1 Generate some synthetic data
 
@@ -159,13 +158,9 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 #### 2.2 Use of `MultiFidelityModel`
 
-Let's now use a multi-fidelity model to transform the low-fidelity data based on a few high-fidelity data points.
-We pick 10 random indices and consider the corresponding high-fidelity data. This data is denoted as 'training data', and will be used to update the full low-fidelity graph.
-To do that, we instantiate a `Graph` with the low-fidelity data as nodes attributes.
-Thereafter, we use the `tranform()` method of the `MultiFidelityModel()` class to update the graph nodes.
-This method uses the low- and high-fidelity data pairs to derive a transformation for all nodes.
-We use the default configuration for the model instance, except for the training data noise level, which is set based on the known or assumed noise of the high-fidelity data (`noise_scale_hf`). 
-After the transformation is computed and applied, we print a summary of the model configuration and parameters.
+We now use a multi-fidelity model to transform the low-fidelity data based on a small subset of high-fidelity points. We randomly select 10 indices and use the corresponding high-fidelity data as 'training data' to update the entire low-fidelity graph. 
+To achieve this, we first initialize a `Graph` with the low-fidelity data as node attributes.
+Next, we apply the `tranform()` method of the `MultiFidelityModel` class, which uses the low- and high-fidelity data pairs to determine a transformation for all nodes. We maintain the default model configuration, except for the noise level of the training data, which is set according to the known or assumed noise of the high-fidelity data (`noise_scale_hf`). Once the transformation is complete, a summary of the model configuration and parameters is printed.
 
 ```python
 ## Multi fidelity model
@@ -269,17 +264,15 @@ axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
 
 ### 3. High-fidelity data acquisition policy
 
-The method uses a small number of low- and high-fielity data pairs to update all low-fidelity data.
-In the example above we picked random pairs, but we can design more effective strategies. 
-For example, we can cluster the low-fidelity data and decide to 'acquire' high-fidelity data corresponding to the centroids of the clusters.
-This will make sure that the acquired high-fidelity data cover the whole graph more uniformly, and that if the graph has specific structures,
-these will be preserved better and carried over the multi-fidelity estimates.
+The method updates all low-fidelity data using a small set of low- and high-fidelity data pairs.
+In the previous example we selected random pairs, but we can design more effective strategies.
+For instance, we can cluster the low-fidelity data and decide to 'acquire' high-fidelity data corresponding to the centroids of the clusters.
+This ensures that the high-fidelity data covers the entire graph uniformly and better preserves any underlying structures, leading to more accurate multi-fidelity estimates.
 
 #### 3.1 Spectral clustering
 
-The `Graph` class has a built-in `cluster()` method to perform spectral clustering of the nodes.
-The idea is embedding the nodes in the graph Laplacian eigenfunction space, and then use a standard clustering technique, e.g. K-means.
-This method returns the indices of the clusters centroids and the cluster label of all nodes.
+The `Graph` class includes a `cluster()` method for performing spectral clustering on the nodes. 
+This involves embedding the nodes in the graph Laplacian eigenfunction space, and then applying a standard clustering technique, e.g. K-means. The method returns both the indices of the cluster centroids and the cluster labels for all nodes.
 
 Here's an example of usage of the `cluster()` method:
 
@@ -302,18 +295,16 @@ ax.grid(True)
 
 #### 3.1 Use of the `fit_transform()` method
 
-We leverage the graph clustering above to a decide which high-fidelity data to acquire.
-Specifically, we select the high-fidelity data that corresponds to the centroids of the low-fidelity graph's clusters. That is,
+We leverage the graph clustering to determine which high-fidelity data to acquire. Specifically, we select the high-fidelity data corresponding to the centroids of the low-fidelity graph's clusters. That is:
 
 ```python
 ## Aquire high-fidelity data at the centroids location
 hf_data_train = hf_data[inds_centroids, :]
 ```
 
-Let's now use the model again with this new selection strategy.
-Further, to compute the transformation we use the `fit_transform()` method of the `MultiFidelityModel` class. 
-This finds the regularization strength parameter `kappa` that results in a specified mean level of uncertainty of the multi-fidelity estimates (`mf_std`).
-This is done by specifing the multi-to-high-fidelity uncertainty ratio `r`, whose default velue is 3.
+Let’s now apply the model again using this new selection strategy. 
+To compute the transformation, we use the `fit_transform()` method of the `MultiFidelityModel` class.
+This method finds the regularization parameter `kappa` that achieves a specified mean level of uncertainty in the multi-fidelity estimates (`mf_std`). The uncertainty is controlled by setting the multi-to-high-fidelity uncertainty ratio `r`, with a default value of 3.
 
 ```python
 ## Initialize the model
@@ -347,53 +338,17 @@ plot_loss_and_kappa(loss_history, kappa_history)
 
 #### 3.2 Visualize the results
 
-Let's take a look at the results obtained with a high-fidelity data acquisition strategy based on clustering.
-We notice how in this case the multi-fidelity data (in blue, in the center figure) are closer to the "underlying truth", i.e. the high-fidelity dataset (in red, on the right).
-Note that the model had only access to the high-fidelity data corresponding to the clusters centroids (shown in the left-most plot, "HF training data"). 
+Let’s examine the results obtained with with a high-fidelity data acquisition strategy based on clustering.
+In this case, the multi-fidelity data (shown in green, in the center figure) are much closer to the "underlying truth", i.e. the high-fidelity dataset (in red, on the right).
+It’s important to note that the model only had access to the high-fidelity data corresponding to the clusters centroids (shown in the left-most plot as "HF training data").
 
-```python
-## Plot results
-fig, axs = plt.subplots(1, 3, figsize=(18, 6))
-
-# Low-fidelity data
-axs[0].set_title("Low-fidelity data", fontsize=16)
-axs[0].scatter(lf_data[:, 0], lf_data[:, 1], color='orange', s=15, label='LF data')
-axs[0].scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1], s=15, color='blue', label='Selected LF data')
-axs[0].scatter(hf_data_train[:, 0], hf_data_train[:, 1], color='red', s=15, label='HF training data')
-axs[0].legend()
-for i in range(len(inds_centroids)):
-    axs[0].plot(
-        [lf_data[inds_centroids[i], 0], hf_data_train[i, 0]],
-        [lf_data[inds_centroids[i], 1], hf_data_train[i, 1]],
-        color='grey',
-        linewidth=1.,
-        alpha=0.75,
-    )
-
-# Multi-fidelity data
-axs[1].set_title("Multi-fidelity data", fontsize=16)
-axs[1].scatter(mf_data[:, 0], mf_data[:, 1], s=15, color='green')
-
-# High-fidelity data
-axs[2].set_title("High-fidelity data", fontsize=16)
-axs[2].scatter(hf_data[:, 0], hf_data[:, 1], s=15, color='red')
-
-for ax in axs:
-    ax.set_xlabel(r"$u_1$", fontsize=16)
-    ax.grid(True)
-    ax.set_xlim(-1.5, 2.)
-    ax.set_ylim(-1.5, 2.)
-axs[0].set_ylabel(r"$u_2$", fontsize=16, rotation=0, labelpad=20)
-```
-
-![Example-2](figures/example-2.png)
+![Example-2](figures/example-transition.png)
 
 ### 4. Uncertainty Quantification
 
-The model provides also the standard deviation of each multi-fidelity esimate, which can be interpreted as an uncertainty measure.
-We can visualize it for this simple 2-d example by coloring each data point based on the value of variance.
-As expected, the uncertainty is larger for points that are further from the training data (the red dots), and approaches
-the high-fidelity noise level (0.01) closer to them. 
+The model also provides the standard deviation for each multi-fidelity estimate, which serves as a measure of uncertainty.
+In this simple 2D example, we can visualize the uncertainty by coloring each data point based on its standard deviation.
+As expected, uncertainty increases for points further from the training data (the red dots) and approaches the high-fidelity noise level (0.01) for points closer to them.
 
 ```python
 ## Plot the standard deviation of multi-fidelity esimates
