@@ -46,7 +46,7 @@ The package was developed and tested with Python 3.12.
 ## Usage
 
 The following sections describe different functionalities provided by the package.
-For end-to-end examples, please check the experiment notebooks.
+For end-to-end examples, please check the experiment notebooks in `notebooks/` and `notebooks/experiments/`.
 
 ### Example Usage
 
