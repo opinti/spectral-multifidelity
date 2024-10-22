@@ -64,57 +64,68 @@ def rearrange(X: np.ndarray, first_inds: List[int]) -> np.ndarray:
 
 
 def error_analysis(
-    x_lf,
-    x_mf,
-    x_hf,
+    x_lf: np.ndarray,
+    x_mf: np.ndarray,
+    x_hf: np.ndarray,
     component_wise: bool = False,
     return_values: bool = False,
     verbose: bool = True,
 ) -> Union[None, Tuple[np.ndarray, np.ndarray]]:
     """
-    Compute the relative error of low- and multi-fidelity data, with respect
-    to referece and high-fidelity data.
+    Compute the relative error between low-fidelity, multi-fidelity, and high-fidelity data.
 
     Parameters:
-    - x_lf (numpy.ndarray): Low-fidelity data of shape (n_points, n_dim).
-    - x_mf (numpy.ndarray): Multi-fidelity data of shape (n_points, n_dim).
-    - x_hf (numpy.ndarray): High-fidelity data of shape (n_points, n_dim).
-    - component_wise (bool): If True, compute component-wise error.
-    - return_values (bool): If True, return the computed errors.
-    - verbose (bool): If True, print the computed errors.
+    x_lf : np.ndarray
+        Low-fidelity data of shape (n_samples, n_features).
+    x_mf : np.ndarray
+        Multi-fidelity data of shape (n_samples, n_features).
+    x_hf : np.ndarray
+        High-fidelity reference data of shape (n_samples, n_features).
+    component_wise : bool, optional
+        If True, compute component-wise error, i.e. along axis=0. Default is False.
+    return_values : bool, optional
+        If True, return the computed errors. Default is False.
+    verbose : bool, optional
+        If True, print the computed errors. Default is True.
+
+    Returns:
+    Union[None, Tuple[np.ndarray, np.ndarray]]
+        If return_values is True, returns a tuple of relative errors (error_lf, error_mf).
+        Otherwise, returns None.
     """
+
     if component_wise:
-        if verbose:
-            print("Component-wise mean relative l2 errors and Improvement Factor (IF)")
-            print("-------------------------------------------------------------------")
-        e_lf = (
+        error_lf = (
             100 * np.mean(np.abs(x_lf - x_hf), axis=0) / np.mean(np.abs(x_hf), axis=0)
         )
-        e_mf = (
+        error_mf = (
             100 * np.mean(np.abs(x_mf - x_hf), axis=0) / np.mean(np.abs(x_hf), axis=0)
         )
+        error_label = "Component-wise mean"
     else:
-        if verbose:
-            print("Mean relative l2 errors and Improvement Factor (IF)")
-            print("----------------------------------------------------")
-        e_lf = (
+        error_lf = (
             100
             * np.mean(np.linalg.norm(x_lf - x_hf, axis=1))
             / np.mean(np.linalg.norm(x_hf, axis=1))
         )
-        e_mf = (
+        error_mf = (
             100
             * np.mean(np.linalg.norm(x_mf - x_hf, axis=1))
             / np.mean(np.linalg.norm(x_hf, axis=1))
         )
+        error_label = "Mean"
 
     if verbose:
-        print(f"Error LF:         {np.round(e_lf, 2)}")
-        print(f"Error MF:         {np.round(e_mf, 2)}")
-        print(f"Percentage drop:  {np.round(100 * (e_lf - e_mf) / e_lf, 2)}%")
+        print(f"{error_label} relative L2 errors and Percentage Error Drop (PED)")
+        print(
+            "-" * len(f"{error_label} relative L2 errors and Improvement Factor (IF)")
+        )
+        print(f"Error LF:  {error_lf:.2f}%")
+        print(f"Error MF:  {error_mf:.2f}%")
+        print(f"PED:       {100 * (error_lf - error_mf) / error_lf:.2f}%")
 
     if return_values:
-        return e_lf, e_mf
+        return error_lf, error_mf
 
 
 def load_model_config(config_path: str, dataset_name: str, return_n_HF: bool = False):
