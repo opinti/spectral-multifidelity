@@ -116,13 +116,12 @@ def error_analysis(
         error_label = "Mean"
 
     if verbose:
-        print(f"{error_label} relative L2 errors and Percentage Error Drop (PED)")
-        print(
-            "-" * len(f"{error_label} relative L2 errors and Improvement Factor (IF)")
-        )
-        print(f"Error LF:  {error_lf:.2f}%")
-        print(f"Error MF:  {error_mf:.2f}%")
-        print(f"PED:       {100 * (error_lf - error_mf) / error_lf:.2f}%")
+        suptitle = f"{error_label} relative L2 errors and percentage error drop"
+        print(suptitle)
+        print("-" * len(suptitle))
+        print(f"Error LF:         {np.round(error_lf, 2)}")
+        print(f"Error MF:         {np.round(error_mf, 2)}")
+        print(f"[%] drop:  {np.round(100 * (error_lf - error_mf) / error_lf, 2)}")
 
     if return_values:
         return error_lf, error_mf
