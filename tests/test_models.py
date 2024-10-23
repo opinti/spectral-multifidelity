@@ -153,6 +153,25 @@ def test_model_transform(graph_instance, sample_high_fidelity_data, model_instan
     assert dPhi.shape == (10,)
 
 
+def test_model_base_performance(
+    graph_instance, sample_high_fidelity_data, model_instance
+):
+    """Test if fit method works correctly with valid inputs."""
+    graph = graph_instance
+    model = model_instance
+    inds_train = np.arange(graph.n_nodes)
+
+    x_HF = sample_high_fidelity_data[inds_train] + 1.0
+    x_MF, C_phi, dPhi = model.transform(graph, x_HF, inds_train)
+
+    error = np.linalg.norm(x_HF - x_MF) / np.linalg.norm(x_HF)
+
+    assert x_MF.shape == graph.nodes.shape, "Multi-fidelity data shape mismatch"
+    assert C_phi.shape == (10, 10), "Covariance matrix shape mismatch"
+    assert dPhi.shape == (10,), "Standard deviation shape mismatch"
+    assert error < 1e-6, "Model performance below threshold"
+
+
 if __name__ == "__main__":
 
     pytest.main()
