@@ -383,6 +383,7 @@ spectral-multifidelity/
 ├── tests/                 # Unit tests
 ├── setup.py               # Setup file
 ├── requirements.txt       # List of dependencies
+├── LICENSE.txt            # Project license
 └── README.md              # Project documentation (this file)
 ```
 
