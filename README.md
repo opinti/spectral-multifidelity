@@ -381,14 +381,14 @@ spectral-multifidelity/
 ├── notebooks/             # Jupyter notebooks with examples and experiments
 │   └── experiments/       # Experiments with datasets in "data/"
 ├── tests/                 # Unit tests
-├── setup.py               # Setup file for packaging
+├── setup.py               # Setup file
 ├── requirements.txt       # List of dependencies
 └── README.md              # Project documentation (this file)
 ```
 
 ## Contact
 
-For any questions or issues, please reach out at orazio.pinti@gmail.com 
+For any questions or issues, please reach out at orazio.pinti@gmail.com.
 
 ## Reference
 
