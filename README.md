@@ -34,12 +34,12 @@ pip install -e .
 
 The project requires the following libraries:
 
-- `numpy`
-- `scipy`
-- `scikit-learn`
-- `scikit-optimize`
-- `umap-learn`
-- `matplotlib`
+- `numpy==1.26.0`
+- `scipy==3.8.0`
+- `scikit-learn==1.5.1`
+- `scikit-optimize==0.8.1`
+- `umap-learn==0.5.6`
+- `matplotlib==4.2.5`
 
 The package was developed and tested with Python 3.12.
 
@@ -54,7 +54,7 @@ The main module of the package is `models.py`. Below are examples demonstrating 
 
 ### 1. Using the `Graph` class
 
-The `Graph` class inherhits from `GraphCore` class, which computes graph-based representations, such as the adjacency matrix and the normalized graph Laplacian.
+The `Graph` class inherits from `GraphCore` class, which computes graph-based representations, such as the adjacency matrix and the normalized graph Laplacian.
 Here is an example of how to initialize an instance of the class and compute graph's representation matrices based on the nodes attributes.
 
 ```python
@@ -281,7 +281,7 @@ Here's an example of usage of the `cluster()` method:
 inds_centroids, labels = graph_lf.cluster(n=n_hf)
 
 fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-ax.set_title("Spectral clustering of low-fidleity data", fontsize=16)
+ax.set_title("Spectral clustering of low-fidelity data", fontsize=16)
 ax.scatter(lf_data[:, 0], lf_data[:, 1], s=25, c=labels, cmap='tab10')
 ax.scatter(lf_data[inds_centroids, 0], lf_data[inds_centroids, 1], color='red', s=50, label='Centroids')
 
@@ -293,7 +293,7 @@ ax.grid(True)
 
 ![Example Clustering](figures/example-clustering.png)
 
-#### 3.1 Use of the `fit_transform()` method
+#### 3.2 Use of the `fit_transform()` method
 
 We leverage the graph clustering to determine which high-fidelity data to acquire. Specifically, we select the high-fidelity data corresponding to the centroids of the low-fidelity graph's clusters. That is:
 
@@ -338,7 +338,7 @@ plot_loss_and_kappa(loss_history, kappa_history)
 
 #### 3.2 Visualize the results
 
-Let’s examine the results obtained with with a high-fidelity data acquisition strategy based on clustering.
+Let’s examine the results obtained with a high-fidelity data acquisition strategy based on clustering.
 In this case, the multi-fidelity data (shown in green, in the center figure) are much closer to the "underlying truth", i.e. the high-fidelity dataset (in red, on the right).
 It’s important to note that the model only had access to the high-fidelity data corresponding to the clusters centroids (shown in the left-most plot as "HF training data").
 
