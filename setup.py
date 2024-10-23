@@ -2,12 +2,19 @@ from setuptools import find_packages, setup
 
 setup(
     name="spectral-multifidelity",
-    packages=find_packages(include=["specmf"]),
-    version="0.1.0",
-    description="Library to perform spectral multifidelity modeling",
+    version="0.1",
+    description="Library to perform Bayesian spectral multi-fidelity modeling",
     author="Orazio Pinti",
     author_email="orazio.pinti@gmail.com",
     url="https://github.com/opinti/spectral-multifidelity",
+    license="MIT",
+    packages=find_packages(),
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3.12",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering",
+    ],
     python_requires=">=3.12",
     install_requires=[
         "numpy==1.26.0",
