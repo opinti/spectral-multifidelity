@@ -54,7 +54,7 @@ The main module of the package is `models.py`. Below are examples demonstrating 
 
 ### 1. Using the `Graph` class
 
-The `Graph` class inherhits from `GraphCore` class, which computes graph-based representations, such as the adjacency matrix and the normalized graph Laplacian. 
+The `Graph` class inherhits from `GraphCore` class, which computes graph-based representations, such as the adjacency matrix and the normalized graph Laplacian.
 Here is an example of how to initialize an instance of the class and compute graph's representation matrices based on the nodes attributes.
 
 ```python
@@ -80,7 +80,7 @@ print(f"{graph_laplacian.shape=}")
 
 ### 2. Using the `MultiFidelityModel` class
 
-The `MultiFidelityModel` class is designed to perform multi-fidelity modeling. 
+The `MultiFidelityModel` class is designed to perform multi-fidelity modeling.
 It transforms all nodes of a graph using a subset of more accurate high-fidelity data.
 
 #### 2.1 Generate some synthetic data
