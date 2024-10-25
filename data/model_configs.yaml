@@ -28,7 +28,7 @@ darcy-flow:
 elasticity-displacement:
   model_config:
     beta: 2
-    kappa: 2.952-09
+    kappa: 2.951e-09
     method: full
     sigma: 0.01
     spectrum_cutoff: null
