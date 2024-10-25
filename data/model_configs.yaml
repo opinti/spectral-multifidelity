@@ -1,7 +1,7 @@
 beam:
   model_config:
     beta: 2
-    kappa: 6.743e-07
+    kappa: 1.1418e-06
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -10,7 +10,7 @@ beam:
 cavity-flow:
   model_config:
     beta: 2
-    kappa: 0.000394
+    kappa: 0.0003943
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -19,7 +19,7 @@ cavity-flow:
 darcy-flow:
   model_config:
     beta: 2
-    kappa: 0.1552
+    kappa: 0.1535
     method: trunc
     sigma: 0.01
     spectrum_cutoff: 1200
@@ -28,7 +28,7 @@ darcy-flow:
 elasticity-displacement:
   model_config:
     beta: 2
-    kappa: 3.883e-09
+    kappa: 2.952-09
     method: full
     sigma: 0.01
     spectrum_cutoff: null
@@ -37,7 +37,7 @@ elasticity-displacement:
 elasticity-traction:
   model_config:
     beta: 2
-    kappa: 0.03178
+    kappa: 0.03148
     method: full
     sigma: 0.01
     spectrum_cutoff: null
