@@ -95,36 +95,74 @@ def error_analysis(
     """
 
     if component_wise:
-        error_lf = (
-            100 * np.mean(np.abs(x_lf - x_hf), axis=0) / np.mean(np.abs(x_hf), axis=0)
-        )
-        error_mf = (
-            100 * np.mean(np.abs(x_mf - x_hf), axis=0) / np.mean(np.abs(x_hf), axis=0)
-        )
+        error_lf_i = 100 * np.abs(x_lf - x_hf) / np.mean(np.abs(x_hf), axis=0)
+        error_lf_mean = np.mean(error_lf_i, axis=0)
+        error_lf_std = np.std(error_lf_i, axis=0)
+
+        error_mf_i = 100 * np.abs(x_mf - x_hf) / np.mean(np.abs(x_hf), axis=0)
+        error_mf_mean = np.mean(error_mf_i, axis=0)
+        error_mf_std = np.std(error_mf_i, axis=0)
+
         error_label = "Component-wise mean"
     else:
-        error_lf = (
+        error_lf_i = (
             100
-            * np.mean(np.linalg.norm(x_lf - x_hf, axis=1))
+            * np.linalg.norm(x_lf - x_hf, axis=1)
             / np.mean(np.linalg.norm(x_hf, axis=1))
         )
-        error_mf = (
+        error_lf_mean = np.array([np.mean(error_lf_i)])
+        error_lf_std = np.array([np.std(error_lf_i)])
+
+        error_mf_i = (
             100
-            * np.mean(np.linalg.norm(x_mf - x_hf, axis=1))
+            * np.linalg.norm(x_mf - x_hf, axis=1)
             / np.mean(np.linalg.norm(x_hf, axis=1))
         )
+        error_mf_mean = np.array([np.mean(error_mf_i)])
+        error_mf_std = np.array([np.std(error_mf_i)])
+
         error_label = "Mean"
 
     if verbose:
+        max_width = max(
+            len(f"{mean} ({std})")
+            for mean, std in zip(np.round(error_lf_mean, 2), np.round(error_lf_std, 2))
+        )
+
+        lf_formatted = " ".join(
+            [
+                f"{mean} ({std})".ljust(max_width)
+                for mean, std in zip(
+                    np.round(error_lf_mean, 2), np.round(error_lf_std, 2)
+                )
+            ]
+        )
+        mf_formatted = " ".join(
+            [
+                f"{mean} ({std})".ljust(max_width)
+                for mean, std in zip(
+                    np.round(error_mf_mean, 2), np.round(error_mf_std, 2)
+                )
+            ]
+        )
+        drop_formatted = " ".join(
+            [
+                f"{drop}%".ljust(max_width)
+                for drop in np.round(
+                    100 * (error_lf_mean - error_mf_mean) / error_lf_mean, 2
+                )
+            ]
+        )
+
         suptitle = f"{error_label} relative L2 errors and percentage error drop"
         print(suptitle)
         print("-" * len(suptitle))
-        print(f"Error LF:  {np.round(error_lf, 2)}")
-        print(f"Error MF:  {np.round(error_mf, 2)}")
-        print(f"[%] drop:  {np.round(100 * (error_lf - error_mf) / error_lf, 2)}")
+        print(f"Error LF:   {lf_formatted}")
+        print(f"Error MF:   {mf_formatted}")
+        print(f"[%] drop:   {drop_formatted}")
 
     if return_values:
-        return error_lf, error_mf
+        return error_lf_mean, error_mf_mean
 
 
 def load_model_config(config_path: str, dataset_name: str, return_n_HF: bool = False):
