@@ -391,10 +391,21 @@ spectral-multifidelity/
 
 For any questions or issues, please reach out at orazio.pinti@gmail.com.
 
-## Reference
+## Citation
 
-Source code of the paper: 
+Source code of the paper:
 
-**Graph Laplacian-based Bayesian Multi-fidelity Modelinge**  
-O. Pinti, J. M. Budd, F. Hoffmann, A. A. Oberai.
-[arXiv:2409.08211](https://arxiv.org/abs/2409.08211)
+```bibtex
+@article{PINTI2025117647,
+title = {Graph Laplacian-based Bayesian multi-fidelity modeling},
+journal = {Computer Methods in Applied Mechanics and Engineering},
+volume = {435},
+pages = {117647},
+year = {2025},
+issn = {0045-7825},
+doi = {https://doi.org/10.1016/j.cma.2024.117647},
+url = {https://www.sciencedirect.com/science/article/pii/S0045782524009010},
+author = {Orazio Pinti and Jeremy M. Budd and Franca Hoffmann and Assad A. Oberai},
+keywords = {Multi-fidelity modeling, Bayesian inference, Uncertainty quantification, Semi-supervised learning, Graph-based learning},
+}
+```
