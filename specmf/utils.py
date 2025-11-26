@@ -1,27 +1,45 @@
-import numpy as np
-from typing import List, Tuple, Union
-from sklearn.cluster import KMeans
-import yaml
 import logging
 
+import numpy as np
+import yaml
+from sklearn.cluster import KMeans
 
-def ordered_eig(X: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+
+def ordered_eig(
+    X: np.ndarray, symmetric: bool = True
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Perform eigenvalue decomposition of a matrix X and return the sorted eigenvalues and corresponding eigenvectors.
 
     Parameters:
     - X (numpy.ndarray): Input matrix for eigenvalue decomposition.
+    - symmetric (bool): If True, assumes X is symmetric/Hermitian and uses eigh for better performance
+                        and numerical stability. Default is True.
 
     Returns:
     - Tuple[numpy.ndarray, numpy.ndarray]: Sorted eigenvalues and corresponding eigenvectors.
     """
-    eigvals, eigvecs = np.linalg.eig(X)
+    if symmetric:
+        # Use eigh for symmetric matrices (faster and more numerically stable)
+        eigvals, eigvecs = np.linalg.eigh(X)
+    else:
+        eigvals, eigvecs = np.linalg.eig(X)
+
     sorting_ind = np.argsort(np.abs(eigvals))
     return eigvals[sorting_ind], eigvecs[:, sorting_ind]
 
 
+# Constants
+DEFAULT_KMEANS_N_INIT = 15
+DEFAULT_RANDOM_STATE = 42
+
+
 def spectral_clustering(
-    eigvecs: np.ndarray, n: int, random_state: int = 42
+    eigvecs: np.ndarray, n: int, random_state: int = DEFAULT_RANDOM_STATE
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Perform spectral clustering and return the indices of the centroids of the clusters.
@@ -34,7 +52,9 @@ def spectral_clustering(
     - tuple: Indices of the centroids of the clusters, labels of the data points.
     """
     P = np.real(eigvecs[:, :n])
-    kmeans = KMeans(n_clusters=n, random_state=random_state, n_init=15).fit(P)
+    kmeans = KMeans(
+        n_clusters=n, random_state=random_state, n_init=DEFAULT_KMEANS_N_INIT
+    ).fit(P)
     labels = kmeans.labels_
     cluster_centers = kmeans.cluster_centers_
     inds_centroids = np.argmin(
@@ -44,7 +64,7 @@ def spectral_clustering(
     return inds_centroids, labels
 
 
-def rearrange(X: np.ndarray, first_inds: List[int]) -> np.ndarray:
+def rearrange(X: np.ndarray, first_inds: list[int]) -> np.ndarray:
     """
     Rearrange the rows of the input matrix X so that the indices specified by first_inds are on top.
 
@@ -70,7 +90,7 @@ def error_analysis(
     component_wise: bool = False,
     return_values: bool = False,
     verbose: bool = True,
-) -> Union[None, Tuple[np.ndarray, np.ndarray]]:
+) -> None | tuple[np.ndarray, np.ndarray]:
     """
     Compute the relative error between low-fidelity, multi-fidelity, and high-fidelity data.
 
@@ -126,35 +146,39 @@ def error_analysis(
     if verbose:
         max_width = max(
             len(f"{mean} ({std})")
-            for mean, std in zip(np.round(error_lf_mean, 2), np.round(error_lf_std, 2))
+            for mean, std in zip(
+                np.round(error_lf_mean, 2),
+                np.round(error_lf_std, 2),
+                strict=False,
+            )
         )
 
-        lf_formatted = " ".join(
-            [
-                f"{mean} ({std})".ljust(max_width)
-                for mean, std in zip(
-                    np.round(error_lf_mean, 2), np.round(error_lf_std, 2)
-                )
-            ]
-        )
-        mf_formatted = " ".join(
-            [
-                f"{mean} ({std})".ljust(max_width)
-                for mean, std in zip(
-                    np.round(error_mf_mean, 2), np.round(error_mf_std, 2)
-                )
-            ]
-        )
-        drop_formatted = " ".join(
-            [
-                f"{drop}%".ljust(max_width)
-                for drop in np.round(
-                    100 * (error_lf_mean - error_mf_mean) / error_lf_mean, 2
-                )
-            ]
-        )
+        lf_formatted = " ".join([
+            f"{mean} ({std})".ljust(max_width)
+            for mean, std in zip(
+                np.round(error_lf_mean, 2),
+                np.round(error_lf_std, 2),
+                strict=False,
+            )
+        ])
+        mf_formatted = " ".join([
+            f"{mean} ({std})".ljust(max_width)
+            for mean, std in zip(
+                np.round(error_mf_mean, 2),
+                np.round(error_mf_std, 2),
+                strict=False,
+            )
+        ])
+        drop_formatted = " ".join([
+            f"{drop}%".ljust(max_width)
+            for drop in np.round(
+                100 * (error_lf_mean - error_mf_mean) / error_lf_mean, 2
+            )
+        ])
 
-        suptitle = f"{error_label} relative L2 errors and percentage error drop"
+        suptitle = (
+            f"{error_label} relative L2 errors and percentage error drop"
+        )
         print(suptitle)
         print("-" * len(suptitle))
         print(f"Error LF:   {lf_formatted}")
@@ -165,7 +189,9 @@ def error_analysis(
         return error_lf_mean, error_mf_mean
 
 
-def load_model_config(config_path: str, dataset_name: str, return_n_HF: bool = False):
+def load_model_config(
+    config_path: str, dataset_name: str, return_n_HF: bool = False
+) -> dict | tuple[dict, int | None]:
     """
     Load model configuration from a YAML file.
 
@@ -178,7 +204,7 @@ def load_model_config(config_path: str, dataset_name: str, return_n_HF: bool = F
         dict or tuple: Model configuration, optionally with n_HF if return_n_HF is True.
     """
     try:
-        with open(config_path, "r") as file:
+        with open(config_path) as file:
             model_config_data = yaml.safe_load(file)
 
         if dataset_name not in model_config_data:

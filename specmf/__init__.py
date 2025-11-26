@@ -1,1 +1,2 @@
-from .models import Graph, MultiFidelityModel  # noqa: F401
+from . import validation
+from .models import Graph, MultiFidelityModel

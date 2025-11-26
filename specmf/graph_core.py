@@ -1,9 +1,11 @@
+import logging
+from collections.abc import Callable
+
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
 from sklearn.decomposition import PCA
 from sklearn.neighbors import kneighbors_graph
-from typing import Callable, Union
-import logging
+
 
 # Setup logging
 logging.basicConfig(level=logging.WARNING)
@@ -25,16 +27,16 @@ class GraphCore:
     def __init__(
         self,
         data: np.ndarray,
-        metric: Union[str, Callable] = "euclidean",
+        metric: str | Callable = "euclidean",
         dist_space: str = "ambient",
         n_components: int = None,
         method: str = "full",
-        k_nn: int = None,
-        corr_scale: float = None,
-        k_adj: int = None,
-        kernel_fn: Callable = None,
-        p: float = None,
-        q: float = None,
+        k_nn: int | None = None,
+        corr_scale: float | None = None,
+        k_adj: int | None = None,
+        kernel_fn: Callable | None = None,
+        p: float | None = None,
+        q: float | None = None,
     ):
         """
         GraphCore class includes methods to compute representations of a graph,
@@ -54,7 +56,9 @@ class GraphCore:
         - q (float): Right exponent for graph Laplacian normalization. Default is 0.5.
         """
         if data.ndim != 2:
-            raise ValueError(f"Data matrix must be 2D, got shape {data.shape}.")
+            raise ValueError(
+                f"Data matrix must be 2D, got shape {data.shape}."
+            )
 
         self.data = data
         self.metric = metric
@@ -64,7 +68,9 @@ class GraphCore:
         self.k_nn = k_nn
         self.corr_scale = corr_scale
         self.k_adj = k_adj if k_adj is not None else self.DEFAULT_K_ADJ
-        self.kernel_fn = kernel_fn if kernel_fn is not None else self._gaussian_kernel
+        self.kernel_fn = (
+            kernel_fn if kernel_fn is not None else self._gaussian_kernel
+        )
         self.p = p if p is not None else self.DEFAULT_P
         self.q = q if q is not None else self.DEFAULT_Q
 
@@ -106,7 +112,9 @@ class GraphCore:
         Returns:
         - np.ndarray: The normalized graph Laplacian.
         """
-        if not isinstance(self.p, (float, int)) or not isinstance(self.q, (float, int)):
+        if not isinstance(self.p, (float, int)) or not isinstance(
+            self.q, (float, int)
+        ):
             raise ValueError(
                 "Normalization exponents 'p' and 'q' must be float or int. "
                 f"Got {type(self.p)} and {type(self.q)} instead."
@@ -169,7 +177,7 @@ class GraphCore:
         )
 
     def _knn_dist_matrix(
-        self, data: np.ndarray, k: int, metric: Union[str, Callable]
+        self, data: np.ndarray, k: int, metric: str | Callable
     ) -> np.ndarray:
         """
         Generate adjacency matrix using k-nearest neighbors.
@@ -184,7 +192,9 @@ class GraphCore:
         """
         dist_matrix = kneighbors_graph(data, k, mode="distance", metric=metric)
         dist_matrix = dist_matrix.toarray()  # Convert to dense matrix
-        dist_matrix[dist_matrix == 0] = np.inf  # Set 0s (non-neighbors) to infinity.
+        dist_matrix[dist_matrix == 0] = (
+            np.inf
+        )  # Set 0s (non-neighbors) to infinity.
         return dist_matrix
 
     def _scale_distance_matrix(self, dist_matrix: np.ndarray) -> np.ndarray:
@@ -206,7 +216,9 @@ class GraphCore:
         else:
             return dist_matrix / self.corr_scale
 
-    def _self_tuned_scaling(self, dist_matrix: np.ndarray, k: int) -> np.ndarray:
+    def _self_tuned_scaling(
+        self, dist_matrix: np.ndarray, k: int
+    ) -> np.ndarray:
         """
         Apply self-tuned scaling to the distance matrix.
 
@@ -248,7 +260,9 @@ class GraphCore:
                 "Parameter 'n_components' must be provided if 'dist_space' is 'pod'."
             )
 
-        if self.n_components is not None and not isinstance(self.n_components, int):
+        if self.n_components is not None and not isinstance(
+            self.n_components, int
+        ):
             raise ValueError(
                 f"Number of components must be an integer. Got {self.n_components} instead."
             )
@@ -257,7 +271,10 @@ class GraphCore:
             raise ValueError(f"'k_nn' must be an integer. Got {self.k_nn}.")
 
         if self.corr_scale is not None:
-            if not isinstance(self.corr_scale, (float, int)) or self.corr_scale <= 0:
+            if (
+                not isinstance(self.corr_scale, (float, int))
+                or self.corr_scale <= 0
+            ):
                 raise ValueError(
                     f"Scale must be a positive float or int. Got {self.corr_scale}."
                 )
@@ -267,7 +284,9 @@ class GraphCore:
                 )
 
         if not isinstance(self.k_adj, int) or self.k_adj <= 0:
-            raise ValueError(f"'k_adj' must be a positive integer. Got {self.k_adj}.")
+            raise ValueError(
+                f"'k_adj' must be a positive integer. Got {self.k_adj}."
+            )
 
         if not callable(self.kernel_fn):
             raise ValueError("Kernel function must be callable.")

@@ -1,10 +1,15 @@
+import logging
+
 import numpy as np
-from typing import Tuple, Dict
+
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 def preprocess_data(
     X_LF: np.ndarray, X_HF: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Preprocess datasets: removes NaN, Inf values, and duplicates.
 
@@ -27,7 +32,7 @@ def preprocess_data(
 
 def _clean_data(
     X1: np.ndarray, X2: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Remove snapshots from datasets if NaN or Inf values are present.
 
@@ -45,7 +50,10 @@ def _clean_data(
 
     X1_flat, X2_flat = _flatten_snapshots(X1), _flatten_snapshots(X2)
     mask = np.any(
-        np.isnan(X1_flat) | np.isinf(X1_flat) | np.isnan(X2_flat) | np.isinf(X2_flat),
+        np.isnan(X1_flat)
+        | np.isinf(X1_flat)
+        | np.isnan(X2_flat)
+        | np.isinf(X2_flat),
         axis=1,
     )
     mask_clean = ~mask
@@ -59,7 +67,7 @@ def _clean_data(
 
 def _remove_duplicates(
     X_LF: np.ndarray, X_HF: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Remove duplicate snapshots from the datasets.
 
@@ -87,7 +95,7 @@ def _remove_duplicates(
 
 def _remove_outliers(
     X: np.ndarray, Y: np.ndarray, max_z_score: float = 3.0, axis: int = 0
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Remove outliers based on z-score.
 
@@ -128,7 +136,7 @@ def normalize_dataset(
     X_HF: np.ndarray,
     dataset_name: str,
     return_normalization_vars: bool = False,
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
     """
     Normalize datasets based on the given dataset name.
 
@@ -156,12 +164,14 @@ def normalize_dataset(
 
 def _normalize_elasticity_displacement(
     X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
     """
     Normalize 'elasticity-displacement' dataset.
     """
     n_dim = X_LF.shape[1]
-    UY_mean = np.linspace(0, np.mean(X_LF[-1], axis=0), n_dim)[:, np.newaxis, :]
+    UY_mean = np.linspace(0, np.mean(X_LF[-1], axis=0), n_dim)[
+        :, np.newaxis, :
+    ]
     X_LF -= UY_mean
     X_HF -= UY_mean
 
@@ -176,11 +186,14 @@ def _normalize_elasticity_displacement(
 
 def _normalize_darcy_flow(
     X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
     """
     Normalize 'darcy-flow' dataset.
     """
-    X_LF_mean, X_HF_mean = np.mean(X_LF, axis=(0, 1)), np.mean(X_HF, axis=(0, 1))
+    X_LF_mean, X_HF_mean = (
+        np.mean(X_LF, axis=(0, 1)),
+        np.mean(X_HF, axis=(0, 1)),
+    )
     X_LF -= X_LF_mean
     X_HF -= X_HF_mean
 
@@ -192,14 +205,18 @@ def _normalize_darcy_flow(
         return (
             X_LF,
             X_HF,
-            {"X_LF_mean": X_LF_mean, "X_HF_mean": X_HF_mean, "X_scale": X_LF_scale},
+            {
+                "X_LF_mean": X_LF_mean,
+                "X_HF_mean": X_HF_mean,
+                "X_scale": X_LF_scale,
+            },
         )
     return X_LF, X_HF
 
 
 def _normalize_elasticity_traction(
     X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
-) -> Tuple[np.ndarray, np.ndarray, Dict[str, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
     """
     Normalize 'elasticity-traction' dataset, reshaped to 3D for compatibility.
 
@@ -214,14 +231,10 @@ def _normalize_elasticity_traction(
     def _generate_inclusion_qoi(X: np.ndarray) -> np.ndarray:
         out_dim = 4
         step = X.shape[0] // out_dim
-        U = np.array(
-            [
-                np.trapz(
-                    X[i * step : (i + 1) * step, :], dx=0.001, axis=0  # noqa: E203
-                )
-                for i in range(out_dim)
-            ]
-        )
+        U = np.array([
+            np.trapz(X[i * step : (i + 1) * step, :], dx=0.001, axis=0)
+            for i in range(out_dim)
+        ])
         U = np.vstack((U, np.max(X, axis=0)))
         return U
 
@@ -244,7 +257,9 @@ def _normalize_elasticity_traction(
     return X_LF[:, np.newaxis, :], X_HF[:, np.newaxis, :]
 
 
-def _normalize(X: np.ndarray, X_mean: np.ndarray, X_scale: np.ndarray) -> np.ndarray:
+def _normalize(
+    X: np.ndarray, X_mean: np.ndarray, X_scale: np.ndarray
+) -> np.ndarray:
     """
     Scale the input matrix of fields based on the mean and scale values.
     """
@@ -254,7 +269,7 @@ def _normalize(X: np.ndarray, X_mean: np.ndarray, X_scale: np.ndarray) -> np.nda
 # Flatten and unflatten data
 def flatten_datasets(
     X_LF: np.ndarray, X_HF: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Flatten the input data matrices into 2D arrays.
 
@@ -282,10 +297,13 @@ def _flatten_snapshots(X: np.ndarray) -> np.ndarray:
         raise ValueError(f"Input matrix must be 3D. Got shape {X.shape}.")
 
     n_samples = X.shape[-1]
-    return np.array([X[:, :, i].flatten() for i in range(n_samples)])
+    # More efficient: use transpose and reshape instead of list comprehension
+    return X.transpose(2, 0, 1).reshape(n_samples, -1)
 
 
-def _unflatten_snapshots(X: np.ndarray, shape_X: Tuple[int, int]) -> np.ndarray:
+def _unflatten_snapshots(
+    X: np.ndarray, shape_X: tuple[int, int]
+) -> np.ndarray:
     """
     Unflatten 2D data back into 3D snapshots.
 
@@ -299,7 +317,9 @@ def _unflatten_snapshots(X: np.ndarray, shape_X: Tuple[int, int]) -> np.ndarray:
     - 3D unflattened data matrix.
     """
     if X.ndim != 2:
-        raise ValueError(f"Input matrix must be 2-dimensional, got shape {X.shape}.")
+        raise ValueError(
+            f"Input matrix must be 2-dimensional, got shape {X.shape}."
+        )
 
     n_samples = X.shape[0]
     if shape_X is None:

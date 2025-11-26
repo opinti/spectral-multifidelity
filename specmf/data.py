@@ -1,10 +1,20 @@
 # Description: This module provides utility functions to load datasets.
-import numpy as np
-import os
-from typing import Tuple
-from specmf.preprocess import preprocess_data, normalize_dataset, flatten_datasets
+import logging
+from pathlib import Path
 
-_data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/")
+import numpy as np
+
+from specmf.preprocess import (
+    flatten_datasets,
+    normalize_dataset,
+    preprocess_data,
+)
+
+
+# Setup logging
+logger = logging.getLogger(__name__)
+
+_data_path = Path(__file__).parent.parent / "data"
 
 
 # Data loading
@@ -15,8 +25,8 @@ def load_data(
     flatten: bool = True,
     return_normalization_vars: bool = False,
     return_mask: bool = False,
-    data_path: str = _data_path,
-) -> Tuple[np.ndarray, np.ndarray]:
+    data_path: str | Path = _data_path,
+) -> tuple[np.ndarray, np.ndarray] | list:
     """
     Load dataset specified by dataset_name.
 
@@ -31,8 +41,12 @@ def load_data(
     - data_path (str): Path to the data directory. Default is "*/spectral-multifidelity/data/".
 
     Returns:
-    - tuple: Low- and high-fidelity data matrix X_LF and X_HF.
+    - tuple: Low- and high-fidelity data matrix X_LF and X_HF, optionally with normalization vars and mask.
     """
+    # Convert to Path if string
+    if isinstance(data_path, str):
+        data_path = Path(data_path)
+
     loaders = {
         "elasticity-displacement": _elasticity_displacement_data,
         "darcy-flow": _darcy_flow_data,
@@ -86,42 +100,47 @@ def load_data(
 
 
 # Data loaders for different datasets
-def _elasticity_displacement_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading elasticity displacement data ...")
-    X_LF = np.load(os.path.join(data_path, "elasticity_displacement/UY_LF.npy"))
-    X_HF = np.load(os.path.join(data_path, "elasticity_displacement/UY_HF.npy"))
+def _elasticity_displacement_data(
+    data_path: Path,
+) -> tuple[np.ndarray, np.ndarray]:
+    logger.info("Loading elasticity displacement data...")
+    X_LF = np.load(data_path / "elasticity_displacement" / "UY_LF.npy")
+    X_HF = np.load(data_path / "elasticity_displacement" / "UY_HF.npy")
     # return preprocess_data(X_LF, X_HF)
     return X_LF, X_HF
 
 
-def _darcy_flow_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading Darcy flow data ...")
-    X_LF = np.load(os.path.join(data_path, "darcy/X_LF.npy"))
-    X_HF = np.load(os.path.join(data_path, "darcy/X_HF.npy"))
+def _darcy_flow_data(data_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    logger.info("Loading Darcy flow data...")
+    print(data_path)
+    X_LF = np.load(data_path / "darcy" / "X_LF.npy")
+    X_HF = np.load(data_path / "darcy" / "X_HF.npy")
     # return preprocess_data(X_LF, X_HF)
     return X_LF, X_HF
 
 
-def _elasticity_traction_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading elasticity traction data ...")
-    X_LF = np.load(os.path.join(data_path, "elasticity_traction/S22_LF.npy"))
-    X_HF = np.load(os.path.join(data_path, "elasticity_traction/S22_HF.npy"))
+def _elasticity_traction_data(
+    data_path: Path,
+) -> tuple[np.ndarray, np.ndarray]:
+    logger.info("Loading elasticity traction data...")
+    X_LF = np.load(data_path / "elasticity_traction" / "S22_LF.npy")
+    X_HF = np.load(data_path / "elasticity_traction" / "S22_HF.npy")
     X_LF = X_LF[:, np.newaxis, :]
     X_HF = X_HF[:, np.newaxis, :]
     return X_LF, X_HF
 
 
-def _beam_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading beam data ...")
-    data = np.load(os.path.join(data_path, "beam/beam-data.npz"))
+def _beam_data(data_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    logger.info("Loading beam data...")
+    data = np.load(data_path / "beam" / "beam-data.npz")
     X_LF = data["beam_yL"].T
     X_HF = data["beam_yH"].T
     return X_LF[:, np.newaxis, :], X_HF[:, np.newaxis, :]
 
 
-def _cavity_flow_data(data_path) -> Tuple[np.ndarray, np.ndarray]:
-    print("Loading cavity flow data ...")
-    data = np.load(os.path.join(data_path, "cavity/cavity-data.npz"))
+def _cavity_flow_data(data_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    logger.info("Loading cavity flow data...")
+    data = np.load(data_path / "cavity" / "cavity-data.npz")
     X_LF = data["cav_yL"].T
     X_HF = data["cav_yH"].T
     return X_LF[:, np.newaxis, :], X_HF[:, np.newaxis, :]
