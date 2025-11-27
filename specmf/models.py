@@ -5,6 +5,7 @@ from functools import cached_property
 
 import numpy as np
 from scipy.linalg import solve
+from scipy.optimize import minimize
 
 from specmf.graph_core import GraphCore
 from specmf.utils import ordered_eig, spectral_clustering
@@ -274,11 +275,9 @@ class MultiFidelityModel:
         x_HF: np.ndarray,
         inds_train: list[int] | None = None,
         r: float = 3.0,
-        maxiter: int = 10,
-        step_size: float = 1.0,
-        step_decay_rate: float = 0.999,
+        maxiter: int = 100,
         ftol: float = 1e-6,
-        gtol: float = 1e-8,
+        gtol: float = 1e-9,
         verbose: bool = False,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[float], list[float]]:
         """
@@ -287,7 +286,7 @@ class MultiFidelityModel:
         This method finds the optimal kappa value such that the ratio between
         mean multi-fidelity uncertainty and high-fidelity noise matches the
         specified target ratio r.
-        The optimization is performed in log-space using gradient descent.
+        The optimization is performed in log-space using L-BFGS-B.
 
         Parameters
         ----------
@@ -304,10 +303,6 @@ class MultiFidelityModel:
             high-fidelity noise level.
         maxiter : int, default=10
             Maximum number of optimization iterations.
-        step_size : float, default=1.0
-            Initial step size for gradient descent.
-        step_decay_rate : float, default=0.999
-            Multiplicative decay rate for the step size at each iteration.
         ftol : float, default=1e-6
             Loss function tolerance. Optimization stops when loss < ftol.
         gtol : float, default=1e-8
@@ -364,46 +359,77 @@ class MultiFidelityModel:
                 g_LF.graph_laplacian
             )
 
-        # Initialize log(kappa)
-        log_kappa = np.log(self.kappa)
+        # histories to return
+        loss_history: list[float] = []
+        kappa_history: list[float] = []
 
-        loss_history = []
-        kappa_history = []
+        # Objective function in log(kappa) space
+        def objective(log_kappa: np.ndarray) -> tuple[float, np.ndarray]:
+            """Return loss and gradient wrt log(kappa) for SciPy."""
+            # log_kappa comes as array([value])
+            log_kappa_scalar = float(log_kappa)
 
-        for it in range(maxiter):
-            # Update kappa and reset omega
-            self.kappa = np.exp(log_kappa)
-            self.omega = None
+            # update model params
+            self.kappa = np.exp(log_kappa_scalar)
+            self.omega = None  # force recomputation from kappa, tau, beta
 
-            # Compute the convariance matrix
-            x_MF, C, dPhi = self.transform(g_LF, x_HF, inds_train)
+            # forward pass
+            _, C, dPhi = self.transform(g_LF, x_HF, inds_train)
 
-            # Compute loss and gradient
+            # loss + gradient - already wrt log(kappa)
             loss = self._compute_loss(dPhi, r)
             grad = self._compute_gradient(dPhi, C, r)
 
-            # Store loss and kappa values
+            # update histories
             loss_history.append(loss)
             kappa_history.append(self.kappa)
 
             if verbose:
                 logger.info(
-                    f"Iteration: {it + 1}, Loss: {loss}, "
-                    f"Gradient: {grad}, Kappa: {self.kappa}"
+                    "log(kappa)=%.3e, kappa=%.3e, loss=%.3e, grad=%.3e",
+                    log_kappa_scalar,
+                    self.kappa,
+                    loss,
+                    grad,
                 )
 
-            if it > 0 and (loss < ftol or abs(grad) < gtol):
-                break
+            return loss, np.array([grad], dtype=float)
 
-            # Update log_kappa and step size
-            log_kappa -= step_size * grad
-            step_size *= step_decay_rate
+        # initial point in log-space
+        x0 = np.array([np.log(self.kappa)], dtype=float)
+
+        # bounds for log-kappa
+        log_kappa_bounds = [(np.log(1e-8), np.log(1e8))]
+
+        res = minimize(
+            fun=lambda z: objective(z)[0],
+            x0=x0,
+            jac=lambda z: objective(z)[1],
+            method="L-BFGS-B",
+            bounds=log_kappa_bounds,
+            options={
+                "maxiter": maxiter,
+                "ftol": ftol,
+                "gtol": gtol,
+            },
+        )
+
+        # final kappa from optimizer
+        log_kappa_opt = float(res.x[0])
+        self.kappa = np.exp(log_kappa_opt)
+        self.omega = None
 
         if verbose:
-            logger.info(f"---- Completed after {it + 1} iterations.")
-            logger.info(f"Final Loss: {loss}")
+            logger.info("Optimization success: %s", res.success)
+            logger.info(
+                "Final log(kappa)=%.3e, kappa=%.3e", log_kappa_opt, self.kappa
+            )
+            logger.info("Final loss=%.3e", res.fun)
 
+        # final forward pass with optimal kappa
+        x_MF, C, dPhi = self.transform(g_LF, x_HF, inds_train)
         self._is_fit = True
+
         return x_MF, C, dPhi, loss_history, kappa_history
 
     def summary(self, params_to_print: list[str] | None = None) -> None:

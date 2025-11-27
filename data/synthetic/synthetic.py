@@ -4,9 +4,7 @@ import numpy as np
 from sklearn.datasets import make_circles, make_s_curve
 
 
-# ============================================================================
-#   2D SYNTHETIC DATA (for figure-readme.ipynb)
-# ============================================================================
+# 2D SYNTHETIC DATA (for figure-readme.ipynb)
 
 
 def affine_transform(data, apply_stretch=True, apply_shift=True):
@@ -72,9 +70,7 @@ def generate_circles_2d(
     return lf_data, hf_data
 
 
-# ============================================================================
-#   3D SYNTHETIC DATA (for figure-presentation.ipynb)
-# ============================================================================
+#  3D SYNTHETIC DATA (for figure-presentation.ipynb)
 
 
 def make_s_cluster(n=500, noise=0.01, random_state=0, return_t=False):
@@ -151,11 +147,6 @@ def make_half_moon_cluster(
     return X
 
 
-# ======================================================
-#   UNFOLDING TRANSFORMS
-# ======================================================
-
-
 def unfold_s_curve(X, t, length=8.0):
     """
     Unfold the S-curve into a straight vertical curtain:
@@ -200,11 +191,6 @@ def bend_half_moon(X, center=(6.0, 5.0, 1.0)):
 
     X_bent = d + center
     return X_bent
-
-
-# ======================================================
-#   GENERATE LF + HF (3D)
-# ======================================================
 
 
 def generate_lf_hf_example(
