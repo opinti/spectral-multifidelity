@@ -1,32 +1,49 @@
+# Global ignores
 .vscode/
 .DS_Store
-specmf/__pycache__/
-tests/__pycache__/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+ruff.toml
+
+# Notebooks
 notebooks/eigen-truncation-analysis.ipynb
 
+# Keep package __init__.py files
+!*/__init__.py
+
+# ignore everything in data/
 data/*
+
+# keep data/__init__.py
+!data/__init__.py
+
+# ---- beam ----
 !data/beam/
 data/beam/*
 !data/beam/.gitkeep
 
+# ---- cavity ----
 !data/cavity/
 data/cavity/*
 !data/cavity/.gitkeep
 
+# ---- darcy ----
 !data/darcy/
 data/darcy/*
 !data/darcy/.gitkeep
 
+# ---- elasticity_traction ----
 !data/elasticity_traction/
 data/elasticity_traction/*
 !data/elasticity_traction/.gitkeep
 
+# ---- elasticity_displacement ----
 !data/elasticity_displacement/
 data/elasticity_displacement/*
 !data/elasticity_displacement/.gitkeep
 
+# ---- synthetic: keep EVERYTHING ----
 !data/synthetic/
-
-build/
-*.egg-info/
-ruff.toml
+!data/synthetic/*
