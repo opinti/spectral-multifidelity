@@ -25,6 +25,8 @@ data/elasticity_traction/*
 data/elasticity_displacement/*
 !data/elasticity_displacement/.gitkeep
 
+!data/synthetic/
+
 build/
 *.egg-info/
 ruff.toml
