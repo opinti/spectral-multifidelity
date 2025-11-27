@@ -226,9 +226,9 @@ plt.title('Spectral Clustering')
   <img src="figures/example-clustering.png" alt="Spectral Clustering" width="500"/>
 </p>
 
-#### 3.2 Adaptive Model Fitting
+#### 3.2 Model Fitting
 
-Use `fit_transform()` to automatically tune the regularization parameter `kappa`:
+Use `fit_transform()` to tune the regularization parameter `kappa` and compute multi-fidelity estimates:
 
 ```python
 # Acquire HF data at cluster centroids
@@ -241,8 +241,6 @@ mf_data, mf_covar, mf_std, loss_hist, kappa_hist = model.fit_transform(
     hf_train,
     centroid_indices,
     r=3.0,              # Target uncertainty ratio (MF/HF)
-    maxiter=200,
-    step_size=10,
     verbose=True
 )
 
@@ -255,7 +253,7 @@ plot_loss_and_kappa(loss_hist, kappa_hist)
   <img src="figures/example-kappa-loss-hist.png" alt="Optimization History" width="700"/>
 </p>
 
-#### 3.3 Results with Intelligent Acquisition
+#### 3.3 Results
 
 The clustering-based strategy produces significantly better multi-fidelity estimates:
 
@@ -293,14 +291,13 @@ spectral-multifidelity/
 ├── specmf/                    # Core package
 │   ├── models.py              # Graph and MultiFidelityModel classes
 │   ├── graph_core.py          # Base graph operations
-│   ├── synthetic.py           # Synthetic data generation
 │   ├── preprocess.py          # Data preprocessing utilities
 │   ├── plot.py                # Visualization tools
 │   ├── utils.py               # Helper functions
 │   └── validation.py          # Model validation tools
 ├── data/                      # Datasets for experiments
-│   ├── synthetic/             # Generated synthetic data
-│   └── [domain-specific]/     # Real-world datasets
+│   ├── synthetic/             # Synthetic data utils
+│   └── [domain-specific]/     # Real datasets
 ├── notebooks/                 # Jupyter notebook examples
 │   ├── experiments/           # Application examples
 │   └── *.ipynb                # Tutorial notebooks
@@ -311,31 +308,34 @@ spectral-multifidelity/
 
 ---
 
-## Citation
+## Paper
 
+**ArXiv:** [arXiv:2409.08211](https://arxiv.org/abs/2409.08211)
+
+**Citation:**
 ```bibtex
-@article{PINTI2025117647,
-	author = {Orazio Pinti and Jeremy M. Budd and Franca Hoffmann and Assad A. Oberai},
-	doi = {https://doi.org/10.1016/j.cma.2024.117647},
-	issn = {0045-7825},
-	journal = {Computer Methods in Applied Mechanics and Engineering},
-	keywords = {Multi-fidelity modeling, Bayesian inference, Uncertainty quantification, Semi-supervised learning, Graph-based learning},
-	pages = {117647},
-	title = {Graph Laplacian-based Bayesian multi-fidelity modeling},
-	url = {https://www.sciencedirect.com/science/article/pii/S0045782524009010},
-	volume = {435},
-	year = {2025},
-	Bdsk-Url-1 = {https://www.sciencedirect.com/science/article/pii/S0045782524009010},
-	Bdsk-Url-2 = {https://doi.org/10.1016/j.cma.2024.117647}}
+@article{
+  PINTI2025117647,
+  author = {Orazio Pinti and Jeremy M. Budd and Franca Hoffmann and Assad A. Oberai},
+  doi = {https://doi.org/10.1016/j.cma.2024.117647},
+  issn = {0045-7825},
+  journal = {Computer Methods in Applied Mechanics and Engineering},
+  keywords = {Multi-fidelity modeling, Bayesian inference, Uncertainty quantification, Semi-supervised learning, Graph-based learning},
+  pages = {117647},
+  title = {Graph Laplacian-based Bayesian multi-fidelity modeling},
+  url = {https://www.sciencedirect.com/science/article/pii/S0045782524009010},
+  volume = {435},
+  year = {2025},
+  Bdsk-Url-1 = {https://www.sciencedirect.com/science/article/pii/S0045782524009010},
+  Bdsk-Url-2 = {https://doi.org/10.1016/j.cma.2024.117647}
+}
 ```
-
-**Paper:** [arXiv:2409.08211](https://arxiv.org/abs/2409.08211)
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+This project is licensed under the MIT License. See the [LICENSE.txt](LICENSE.txt) file for details.
 
 ## Contact
 
