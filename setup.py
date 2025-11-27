@@ -23,7 +23,6 @@ setup(
         "scipy==1.11.3",
         "scikit-learn==1.5.1",
         "pytest==8.3.3",
-        "scikit-optimize==0.8.1",
         "umap-learn==0.5.6",
         "pyyaml>=5.1",
     ],

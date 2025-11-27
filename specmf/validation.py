@@ -1,6 +1,4 @@
-"""
-Input validation utilities for the specmf package.
-"""
+"""Input validation utilities for the specmf package."""
 
 import numpy as np
 
@@ -8,16 +6,21 @@ import numpy as np
 def validate_array_shape(
     arr: np.ndarray, expected_ndim: int, name: str = "array"
 ) -> None:
-    """
-    Validate that an array has the expected number of dimensions.
+    """Validate that an array has expected number of dimensions.
 
-    Parameters:
-    - arr (np.ndarray): Input array to validate.
-    - expected_ndim (int): Expected number of dimensions.
-    - name (str): Name of the array for error messages.
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array to validate.
+    expected_ndim : int
+        Expected number of dimensions.
+    name : str, optional
+        Name of the array for error messages. Default is 'array'.
 
-    Raises:
-    - ValueError: If array doesn't have the expected dimensions.
+    Raises
+    ------
+    ValueError
+        If array doesn't have the expected dimensions.
     """
     if arr.ndim != expected_ndim:
         raise ValueError(
@@ -26,15 +29,19 @@ def validate_array_shape(
 
 
 def validate_positive_scalar(value: int | float, name: str = "value") -> None:
-    """
-    Validate that a value is a positive scalar.
+    """Validate that a value is a positive scalar.
 
-    Parameters:
-    - value: Value to validate.
-    - name (str): Name of the value for error messages.
+    Parameters
+    ----------
+    value : int or float
+        Value to validate.
+    name : str, optional
+        Name of the value for error messages. Default is 'value'.
 
-    Raises:
-    - ValueError: If value is not positive.
+    Raises
+    ------
+    ValueError
+        If value is not positive.
     """
     if value is None or value <= 0:
         raise ValueError(f"{name} must be positive, got {value}.")
@@ -47,37 +54,52 @@ def validate_array_compatibility(
     name1: str = "array1",
     name2: str = "array2",
 ) -> None:
-    """
-    Validate that two arrays are compatible along a specific axis.
+    """Validate that two arrays are compatible along an axis.
 
-    Parameters:
-    - arr1 (np.ndarray): First array.
-    - arr2 (np.ndarray): Second array.
-    - axis (int): Axis along which to check compatibility.
-    - name1 (str): Name of first array for error messages.
-    - name2 (str): Name of second array for error messages.
+    Parameters
+    ----------
+    arr1 : np.ndarray
+        First array.
+    arr2 : np.ndarray
+        Second array.
+    axis : int, optional
+        Axis along which to check compatibility. Default is 1.
+    name1 : str, optional
+        Name of first array for error messages. Default is 'array1'.
+    name2 : str, optional
+        Name of second array for error messages. Default is 'array2'.
 
-    Raises:
-    - ValueError: If arrays are not compatible.
+    Raises
+    ------
+    ValueError
+        If arrays are not compatible.
     """
     if arr1.shape[axis] != arr2.shape[axis]:
         raise ValueError(
-            f"{name1} and {name2} must have the same size along axis {axis}. "
-            f"Got {arr1.shape[axis]} and {arr2.shape[axis]}."
+            f"{name1} and {name2} must have the same size along "
+            f"axis {axis}. Got {arr1.shape[axis]} and "
+            f"{arr2.shape[axis]}."
         )
 
 
-def validate_indices(indices: list[int], max_index: int, name: str = "indices") -> None:
-    """
-    Validate that all indices are within valid range.
+def validate_indices(
+    indices: list[int], max_index: int, name: str = "indices"
+) -> None:
+    """Validate that all indices are within valid range.
 
-    Parameters:
-    - indices (List[int]): List of indices to validate.
-    - max_index (int): Maximum valid index (exclusive).
-    - name (str): Name of the indices for error messages.
+    Parameters
+    ----------
+    indices : list of int
+        List of indices to validate.
+    max_index : int
+        Maximum valid index (exclusive).
+    name : str, optional
+        Name of the indices for error messages. Default is 'indices'.
 
-    Raises:
-    - ValueError: If any index is out of range.
+    Raises
+    ------
+    ValueError
+        If any index is out of range.
     """
     if not all(0 <= idx < max_index for idx in indices):
         raise ValueError(
@@ -88,16 +110,21 @@ def validate_indices(indices: list[int], max_index: int, name: str = "indices") 
 def validate_method_choice(
     method: str, valid_methods: list[str], name: str = "method"
 ) -> None:
-    """
-    Validate that a method choice is valid.
+    """Validate that a method choice is valid.
 
-    Parameters:
-    - method (str): Method to validate.
-    - valid_methods (List[str]): List of valid method names.
-    - name (str): Name of the parameter for error messages.
+    Parameters
+    ----------
+    method : str
+        Method to validate.
+    valid_methods : list of str
+        List of valid method names.
+    name : str, optional
+        Name of the parameter for error messages. Default is 'method'.
 
-    Raises:
-    - ValueError: If method is not valid.
+    Raises
+    ------
+    ValueError
+        If method is not valid.
     """
     if method not in valid_methods:
         raise ValueError(

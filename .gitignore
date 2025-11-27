@@ -27,3 +27,4 @@ data/elasticity_displacement/*
 
 build/
 *.egg-info/
+ruff.toml

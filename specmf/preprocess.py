@@ -1,3 +1,5 @@
+"""Data preprocessing utilities for multi-fidelity datasets."""
+
 import logging
 
 import numpy as np
@@ -10,16 +12,20 @@ logger = logging.getLogger(__name__)
 def preprocess_data(
     X_LF: np.ndarray, X_HF: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Preprocess datasets: removes NaN, Inf values, and duplicates.
+    """Preprocess datasets: remove NaN, Inf, and duplicates.
 
-    Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix (n_dim1, n_dim2, n_samples).
-    - X_HF (np.ndarray): High-fidelity data matrix (n_dim1, n_dim2, n_samples).
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data matrix (n_dim1, n_dim2, n_samples).
+    X_HF : np.ndarray
+        High-fidelity data matrix (n_dim1, n_dim2, n_samples).
 
-    Returns:
-    - Tuple: Preprocessed low- and high-fidelity matrices and a global mask. The
-        global mask is a boolean array that indicates the valid points in the datasets.
+    Returns
+    -------
+    tuple of np.ndarray
+        Preprocessed low- and high-fidelity matrices and global mask.
+        The mask is a boolean array indicating valid points.
     """
     X_LF, X_HF, mask_clean = _clean_data(X_LF, X_HF)
     X_LF, X_HF, mask_uniques = _remove_duplicates(X_LF, X_HF)
@@ -33,19 +39,24 @@ def preprocess_data(
 def _clean_data(
     X1: np.ndarray, X2: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Remove snapshots from datasets if NaN or Inf values are present.
+    """Remove snapshots with NaN or Inf values.
 
-    Parameters:
-    - X1 (np.ndarray): Low-fidelity data matrix.
-    - X2 (np.ndarray): High-fidelity data matrix.
+    Parameters
+    ----------
+    X1 : np.ndarray
+        Low-fidelity data matrix.
+    X2 : np.ndarray
+        High-fidelity data matrix.
 
-    Returns:
-    - Tuple: Cleaned data matrices and a mask of valid points.
+    Returns
+    -------
+    tuple of np.ndarray
+        Cleaned data matrices and a mask of valid points.
     """
     if X1.ndim != X2.ndim or X1.ndim != 3:
         raise ValueError(
-            f"Input matrices must be 3D with matching shapes, got {X1.shape} and {X2.shape}."
+            f"Input matrices must be 3D with matching shapes, "
+            f"got {X1.shape} and {X2.shape}."
         )
 
     X1_flat, X2_flat = _flatten_snapshots(X1), _flatten_snapshots(X2)
@@ -68,15 +79,19 @@ def _clean_data(
 def _remove_duplicates(
     X_LF: np.ndarray, X_HF: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Remove duplicate snapshots from the datasets.
+    """Remove duplicate snapshots from the datasets.
 
-    Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix.
-    - X_HF (np.ndarray): High-fidelity data matrix.
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data matrix.
+    X_HF : np.ndarray
+        High-fidelity data matrix.
 
-    Returns:
-    - Tuple: Unique low- and high-fidelity data matrices and mask of unique points.
+    Returns
+    -------
+    tuple of np.ndarray
+        Unique low- and high-fidelity matrices and mask of unique pts.
     """
     X_LF_flat, X_HF_flat = _flatten_snapshots(X_LF), _flatten_snapshots(X_HF)
 
@@ -94,19 +109,28 @@ def _remove_duplicates(
 
 
 def _remove_outliers(
-    X: np.ndarray, Y: np.ndarray, max_z_score: float = 3.0, axis: int = 0
+    X: np.ndarray,
+    Y: np.ndarray,
+    max_z_score: float = 3.0,
+    axis: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Remove outliers based on z-score.
+    """Remove outliers based on z-score.
 
-    Parameters:
-    - X (np.ndarray): Reference data matrix.
-    - Y (np.ndarray): Dependant data matrix.
-    - max_z_score (float): Maximum allowed z-score.
-    - axis (int): Axis along which to calculate the z-score.
+    Parameters
+    ----------
+    X : np.ndarray
+        Reference data matrix.
+    Y : np.ndarray
+        Dependent data matrix.
+    max_z_score : float, optional
+        Maximum allowed z-score. Default is 3.0.
+    axis : int, optional
+        Axis along which to calculate z-score. Default is 0.
 
-    Returns:
-    - Tuple: Cleaned reference and dependent matrices.
+    Returns
+    -------
+    tuple of np.ndarray
+        Cleaned reference and dependent matrices.
     """
     mean = np.mean(X, axis=axis)
     std_dev = np.std(X, axis=axis)
@@ -130,23 +154,29 @@ def _remove_outliers(
     return X_clean, Y_clean
 
 
-# Data normalizers
 def normalize_dataset(
     X_LF: np.ndarray,
     X_HF: np.ndarray,
     dataset_name: str,
     return_normalization_vars: bool = False,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
-    """
-    Normalize datasets based on the given dataset name.
+    """Normalize datasets based on the dataset name.
 
-    Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix.
-    - X_HF (np.ndarray): High-fidelity data matrix.
-    - dataset_name (str): Name of the dataset.
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data matrix.
+    X_HF : np.ndarray
+        High-fidelity data matrix.
+    dataset_name : str
+        Name of the dataset.
+    return_normalization_vars : bool, optional
+        Whether to return normalization variables. Default is False.
 
-    Returns:
-    - Tuple: Normalized datasets and (optionally) normalization variables.
+    Returns
+    -------
+    tuple
+        Normalized datasets and (optionally) normalization variables.
     """
     normalizers = {
         "elasticity-displacement": _normalize_elasticity_displacement,
@@ -155,19 +185,20 @@ def normalize_dataset(
     }
 
     if dataset_name not in normalizers:
+        valid_names = list(normalizers.keys())
         raise ValueError(
-            f"Invalid dataset name. Available options: {list(normalizers.keys())}."
+            f"Invalid dataset name. Available options: {valid_names}."
         )
 
     return normalizers[dataset_name](X_LF, X_HF, return_normalization_vars)
 
 
 def _normalize_elasticity_displacement(
-    X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
+    X_LF: np.ndarray,
+    X_HF: np.ndarray,
+    return_normalization_vars: bool,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
-    """
-    Normalize 'elasticity-displacement' dataset.
-    """
+    """Normalize 'elasticity-displacement' dataset."""
     n_dim = X_LF.shape[1]
     UY_mean = np.linspace(0, np.mean(X_LF[-1], axis=0), n_dim)[
         :, np.newaxis, :
@@ -185,11 +216,11 @@ def _normalize_elasticity_displacement(
 
 
 def _normalize_darcy_flow(
-    X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
+    X_LF: np.ndarray,
+    X_HF: np.ndarray,
+    return_normalization_vars: bool,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
-    """
-    Normalize 'darcy-flow' dataset.
-    """
+    """Normalize 'darcy-flow' dataset."""
     X_LF_mean, X_HF_mean = (
         np.mean(X_LF, axis=(0, 1)),
         np.mean(X_HF, axis=(0, 1)),
@@ -215,17 +246,27 @@ def _normalize_darcy_flow(
 
 
 def _normalize_elasticity_traction(
-    X_LF: np.ndarray, X_HF: np.ndarray, return_normalization_vars: bool
+    X_LF: np.ndarray,
+    X_HF: np.ndarray,
+    return_normalization_vars: bool,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, np.ndarray]]:
-    """
-    Normalize 'elasticity-traction' dataset, reshaped to 3D for compatibility.
+    """Normalize 'elasticity-traction' dataset.
 
-    Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix.
-    - X_HF (np.ndarray): High-fidelity data matrix.
+    Reshapes to 3D for compatibility.
 
-    Returns:
-    - Tuple: Normalized inclusion QoI matrices and (optionally) normalization variables.
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data matrix.
+    X_HF : np.ndarray
+        High-fidelity data matrix.
+    return_normalization_vars : bool
+        Whether to return normalization variables.
+
+    Returns
+    -------
+    tuple
+        Normalized QoI matrices and (optionally) normalization vars.
     """
 
     def _generate_inclusion_qoi(X: np.ndarray) -> np.ndarray:
@@ -240,7 +281,8 @@ def _normalize_elasticity_traction(
 
     X_LF, X_HF = X_LF.squeeze(axis=1), X_HF.squeeze(axis=1)
 
-    X_LF, X_HF = _generate_inclusion_qoi(X_LF), _generate_inclusion_qoi(X_HF)
+    X_LF = _generate_inclusion_qoi(X_LF)
+    X_HF = _generate_inclusion_qoi(X_HF)
     X_LF, X_HF = _remove_outliers(X_LF, X_HF, max_z_score=3.5, axis=1)
 
     X_LF_mean, X_LF_std = np.mean(X_LF, axis=1), np.std(X_LF, axis=1)
@@ -260,61 +302,68 @@ def _normalize_elasticity_traction(
 def _normalize(
     X: np.ndarray, X_mean: np.ndarray, X_scale: np.ndarray
 ) -> np.ndarray:
-    """
-    Scale the input matrix of fields based on the mean and scale values.
-    """
+    """Scale the input matrix based on mean and scale values."""
     return (X - X_mean) / (X_scale + 1e-8)
 
 
-# Flatten and unflatten data
 def flatten_datasets(
     X_LF: np.ndarray, X_HF: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Flatten the input data matrices into 2D arrays.
+    """Flatten the input data matrices into 2D arrays.
 
-    Parameters:
-    - X_LF (np.ndarray): Low-fidelity data matrix.
-    - X_HF (np.ndarray): High-fidelity data matrix.
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data matrix.
+    X_HF : np.ndarray
+        High-fidelity data matrix.
 
-    Returns:
-    - Tuple: Flattened low- and high-fidelity data matrices.
+    Returns
+    -------
+    tuple of np.ndarray
+        Flattened low- and high-fidelity data matrices.
     """
     return _flatten_snapshots(X_LF), _flatten_snapshots(X_HF)
 
 
 def _flatten_snapshots(X: np.ndarray) -> np.ndarray:
-    """
-    Flatten the snapshots in the data matrix.
+    """Flatten the snapshots in the data matrix.
 
-    Parameters:
-    - X (np.ndarray): Data matrix of shape (n_dim1, n_dim2, n_samples).
+    Parameters
+    ----------
+    X : np.ndarray
+        Data matrix of shape (n_dim1, n_dim2, n_samples).
 
-    Returns:
-    - Flattened data matrix of shape (n_samples, n_dim1 * n_dim2).
+    Returns
+    -------
+    np.ndarray
+        Flattened data matrix of shape (n_samples, n_dim1 * n_dim2).
     """
     if X.ndim != 3:
         raise ValueError(f"Input matrix must be 3D. Got shape {X.shape}.")
 
     n_samples = X.shape[-1]
-    # More efficient: use transpose and reshape instead of list comprehension
+    # Use transpose and reshape for efficiency
     return X.transpose(2, 0, 1).reshape(n_samples, -1)
 
 
 def _unflatten_snapshots(
     X: np.ndarray, shape_X: tuple[int, int]
 ) -> np.ndarray:
-    """
-    Unflatten 2D data back into 3D snapshots.
+    """Unflatten 2D data back into 3D snapshots.
 
-    Parameters:
-    - X (np.ndarray): Flattened data matrix.
-    - shape_X (Tuple[int, int]): Original dimensions of snapshots. If not provided, the
-        function will assume square snapshots.
+    Parameters
+    ----------
+    X : np.ndarray
+        Flattened data matrix.
+    shape_X : tuple of int
+        Original dimensions of snapshots (n_dim1, n_dim2).
+        If None, assumes square snapshots.
 
-
-    Returns:
-    - 3D unflattened data matrix.
+    Returns
+    -------
+    np.ndarray
+        3D unflattened data matrix.
     """
     if X.ndim != 2:
         raise ValueError(

@@ -1,3 +1,5 @@
+"""Plotting utilities for multi-fidelity data visualization."""
+
 import logging
 from collections.abc import Callable
 
@@ -9,7 +11,6 @@ from matplotlib.ticker import MaxNLocator
 # Setup logging
 logger = logging.getLogger(__name__)
 
-
 # Update matplotlib settings
 plt.rcParams.update({
     "text.usetex": True,
@@ -18,7 +19,6 @@ plt.rcParams.update({
 })
 
 
-# General plotting functions
 def plot_distributions(
     e_LF: np.ndarray,
     e_MF: np.ndarray,
@@ -26,7 +26,29 @@ def plot_distributions(
     bins_MF: int = 50,
     mask: np.ndarray | None = None,
     return_axs: bool = False,
-) -> np.ndarray | None:
+) -> tuple[plt.Figure, np.ndarray] | None:
+    """Plot error distributions for LF and MF data.
+
+    Parameters
+    ----------
+    e_LF : np.ndarray
+        Low-fidelity errors.
+    e_MF : np.ndarray
+        Multi-fidelity errors.
+    bins_LF : int, optional
+        Number of bins for LF histogram. Default is 50.
+    bins_MF : int, optional
+        Number of bins for MF histogram. Default is 50.
+    mask : np.ndarray, optional
+        Boolean mask to filter data. Default is None.
+    return_axs : bool, optional
+        Whether to return axes. Default is False.
+
+    Returns
+    -------
+    np.ndarray or None
+        Axes array if return_axs is True, else None.
+    """
     if mask is None:
         mask = np.ones_like(e_LF, dtype=bool)
 
@@ -35,7 +57,11 @@ def plot_distributions(
     )
 
     f, _, _ = axs[0].hist(
-        e_MF[mask], bins=bins_MF, alpha=0.75, zorder=10, label="Multi-Fidelity"
+        e_MF[mask],
+        bins=bins_MF,
+        alpha=0.75,
+        zorder=10,
+        label="Multi-Fidelity",
     )
     axs[0].hist(e_LF[mask], bins=bins_LF, alpha=0.75, label="Low-Fidelity")
     axs[0].grid(True, linewidth=0.5)
@@ -62,13 +88,28 @@ def plot_distributions(
     axs[1].set_xlabel(r"Error [\%]", fontsize=26, labelpad=15)
     plt.tight_layout()
 
-    return axs if return_axs else None
+    return fig, axs if return_axs else None
 
 
-def plot_spectrum(eigvals: np.ndarray, n: int) -> None:
+def plot_spectrum(
+    eigvals: np.ndarray, n: int, return_axs: bool = False
+) -> tuple[plt.Figure, plt.Axes] | None:
+    """Plot eigenvalue spectrum.
+
+    Parameters
+    ----------
+    eigvals : np.ndarray
+        Eigenvalues to plot.
+    n : int
+        Number of eigenvalues to display.
+    """
     fig, ax = plt.subplots(1, 1, figsize=(8, 4))
     ax.plot(
-        np.arange(1, n + 1), np.abs(eigvals[:n]), "o-", c="k", markersize=5
+        np.arange(1, n + 1),
+        np.abs(eigvals[:n]),
+        "o-",
+        c="k",
+        markersize=5,
     )
     ax.set_yscale("log")
     ax.set_xticks(range(1, n + 1, 5))
@@ -77,10 +118,19 @@ def plot_spectrum(eigvals: np.ndarray, n: int) -> None:
     ax.set_ylabel(r"$\lambda_m$", fontsize=20, rotation=0, labelpad=20)
     ax.grid(True, linestyle="--", linewidth=0.5)
     plt.tight_layout()
+    return fig, ax if return_axs else None
 
 
-def plot_cluster_size_hist(labels: np.ndarray) -> None:
-    """Plot a histogram of cluster sizes."""
+def plot_cluster_size_hist(
+    labels: np.ndarray, return_axs: bool = False
+) -> tuple[plt.Figure, plt.Axes] | None:
+    """Plot a histogram of cluster sizes.
+
+    Parameters
+    ----------
+    labels : np.ndarray
+        Cluster labels for each data point.
+    """
     clus_sizes = np.bincount(labels)
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(np.sort(clus_sizes), bins=20)
@@ -90,17 +140,25 @@ def plot_cluster_size_hist(labels: np.ndarray) -> None:
     ax.tick_params(axis="both", labelsize=12)
     ax.set_title("Cluster size histogram", fontsize=18)
     plt.tight_layout()
+    return fig, ax if return_axs else None
 
 
 def plot_loss_and_kappa(
-    loss_history: list[float], kappa_history: list[float]
-) -> None:
+    loss_history: list[float],
+    kappa_history: list[float],
+    return_axs: bool = False,
+) -> tuple[plt.Figure, plt.Axes, plt.Axes] | None:
+    """Plot loss and kappa histories with dual y-axes.
+
+    Parameters
+    ----------
+    loss_history : list of float
+        Loss values at each iteration.
+    kappa_history : list of float
+        Kappa values at each iteration.
     """
-    Plot loss history and kappa history on the same figure with two y-axes.
-    """
-    assert len(loss_history) == len(kappa_history), (
-        "Loss and kappa histories must have the same length."
-    )
+    if len(loss_history) != len(kappa_history):
+        raise ValueError("Loss and kappa histories must have the same length.")
 
     iterations = np.arange(len(loss_history))
 
@@ -125,13 +183,25 @@ def plot_loss_and_kappa(
     ax1.grid(True)
     plt.title("Loss and Kappa History")
     plt.show()
+    return fig, ax1, ax2 if return_axs else None
 
 
-# Data plotting functions
 def plot_data(
     X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs
 ) -> None:
-    """Plot low-fidelity and high-fidelity data based on the dataset name."""
+    """Plot low-fidelity and high-fidelity data.
+
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data.
+    X_HF : np.ndarray
+        High-fidelity data.
+    dataset_name : str
+        Name of the dataset to determine plot type.
+    **kwargs
+        Additional keyword arguments for plotting functions.
+    """
     plotters: dict[str, Callable] = {
         "elasticity-displacement": _plot_lf_hf_fields_samples,
         "darcy-flow": _plot_lf_hf_fields_samples,
@@ -142,8 +212,10 @@ def plot_data(
 
     plot_func = plotters.get(dataset_name)
     if plot_func is None:
+        valid_names = list(plotters.keys())
         raise ValueError(
-            f"Invalid dataset name: {dataset_name}. Expected one of {list(plotters.keys())}."
+            f"Invalid dataset name: {dataset_name}. "
+            f"Expected one of {valid_names}."
         )
 
     plot_func(X_LF, X_HF, **kwargs)
@@ -286,7 +358,8 @@ def plot_mf_comparison(
     plot_func = plotters.get(dataset_name)
     if plot_func is None:
         raise ValueError(
-            f"Invalid dataset name: {dataset_name}. Expected one of {list(plotters.keys())}."
+            f"Invalid dataset name: {dataset_name}. "
+            f"Expected one of {list(plotters.keys())}."
         )
 
     plot_func(X_LF, X_MF, X_HF, **kwargs)
@@ -298,34 +371,44 @@ def _plot_mf_comparison_field(
     X_MF: np.ndarray,
     X_HF: np.ndarray,
     samples: list[int],
-    input_field: np.ndarray | None = None,  # Permeability data, optional
-    titles: list[str] | None = None,  # Titles for subplots, optional
+    input_field: np.ndarray | None = None,
+    titles: list[str] | None = None,
     levels: int = 10,
     cmap_diff: str = "Reds",
     cmap_inp: str = "Blues",
     **kwargs,
 ) -> None:
-    """
-    Generalized function to plot multi-fidelity field comparisons with optional permeability data.
+    """Plot multi-fidelity field comparisons.
 
-    Parameters:
-    - X_LF: Low-fidelity data (2D array).
-    - X_MF: Multi-fidelity data (2D array).
-    - X_HF: High-fidelity data (2D array).
-    - samples: List of samples to plot. If None, 5 random samples are chosen.
-    - input_field: Optional permeability data (3D array).
-    - titles: Optional list of titles for subplots.
-    - n_samples: Number of samples to plot (default is 4).
-    - levels: Number of contour levels (default is 10).
-    - cmap_diff: Colormap for error plots (default is "Reds").
-    - cmap_inp: Colormap for permeability plots (default is "Blues").
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data (2D array).
+    X_MF : np.ndarray
+        Multi-fidelity data (2D array).
+    X_HF : np.ndarray
+        High-fidelity data (2D array).
+    samples : list of int
+        List of samples to plot. If None, 5 random chosen.
+    input_field : np.ndarray, optional
+        Optional input field data (e.g., permeability, 3D array).
+    titles : list of str, optional
+        Optional list of titles for subplots.
+    levels : int, optional
+        Number of contour levels. Default is 10.
+    cmap_diff : str, optional
+        Colormap for error plots. Default is "Reds".
+    cmap_inp : str, optional
+        Colormap for input field plots. Default is "Blues".
+    **kwargs
+        Additional keyword arguments.
     """
 
     if samples is None:
         samples = np.random.choice(X_LF.shape[0], 5, replace=False)
 
     n_samples = len(samples)
-    n_points, n_dim = X_LF.shape
+    _, n_dim = X_LF.shape
     n_res = int(np.sqrt(n_dim))
 
     # Set default titles if none provided
@@ -500,22 +583,34 @@ def _plot_mf_comparison_curves(
     figsize: tuple[float, float] = (12.5, 8),
     grid: bool = True,
 ) -> None:
-    """
-    General function to plot multi-fidelity comparison curves.
+    """Plot multi-fidelity comparison curves.
 
-    Parameters:
-    - X_LF: Low-fidelity data (2D array).
-    - X_MF: Multi-fidelity data (2D array).
-    - X_HF: High-fidelity data (2D array).
-    - x_values: Array of x-axis values for plotting.
-    - xlabel: Label for the x-axis.
-    - ylabel: Label for the y-axis.
-    - samples: List of samples to plot (default: None).
-    - ymax: Maximum value for the y-axis (default: None).
-    - ymin: Minimum value for the y-axis (default: None).
-    - legend_loc: Location for the legend in the last subplot (default: 'lower right').
-    - figsize: Size of the figure (default: (12.5, 8)).
-    - grid: Whether to show grid (default: True).
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data (2D array).
+    X_MF : np.ndarray
+        Multi-fidelity data (2D array).
+    X_HF : np.ndarray
+        High-fidelity data (2D array).
+    x_values : np.ndarray
+        Array of x-axis values for plotting.
+    xlabel : str
+        Label for the x-axis.
+    ylabel : str
+        Label for the y-axis.
+    samples : list of int, optional
+        List of samples to plot. Default is None (random).
+    ymax : float, optional
+        Maximum value for the y-axis. Default is None (auto).
+    ymin : float, optional
+        Minimum value for the y-axis. Default is None (auto).
+    legend_loc : str, optional
+        Location for the legend. Default is 'lower right'.
+    figsize : tuple of float, optional
+        Size of the figure. Default is (12.5, 8).
+    grid : bool, optional
+        Whether to show grid. Default is True.
     """
     if samples is None:
         samples = np.random.choice(X_LF.shape[0], 4, replace=False)
@@ -524,8 +619,8 @@ def _plot_mf_comparison_curves(
         n_samples = len(samples)
         if n_samples != 4:
             logger.warning(
-                f"Expected 4 samples, but got {n_samples}. "
-                "Only the first 4 samples will be plotted."
+                f"Expected 4 samples, but got {n_samples}. Only the "
+                f"first 4 samples will be plotted."
             )
 
     fig, axs = plt.subplots(2, 2, figsize=figsize)
