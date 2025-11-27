@@ -1,0 +1,60 @@
+# Ruff configuration for spectral-multifidelity
+
+target-version = "py312"
+line-length = 79
+
+fix = true  # controls lint --fix, not the formatter
+
+[lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort (import sorting)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+    "E501",
+    "B008",
+    "N803",
+    "N806",
+    "SIM108",
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+    ".ipynb_checkpoints",
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*.py" = ["E501", "F841"]
+
+[lint.isort]
+known-first-party = ["specmf"]
+force-single-line = false
+lines-after-imports = 2
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = 72
+preview = true

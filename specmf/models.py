@@ -1,23 +1,42 @@
-import numpy as np
-from specmf.utils import ordered_eig, spectral_clustering
-from specmf.graph_core import GraphCore
+"""Multi-fidelity modeling using spectral methods."""
+
+import logging
 from functools import cached_property
+
+import numpy as np
 from scipy.linalg import solve
+
+from specmf.graph_core import GraphCore
+from specmf.utils import ordered_eig, spectral_clustering
+from specmf.validation import (
+    validate_array_compatibility,
+    validate_array_shape,
+    validate_method_choice,
+    validate_positive_scalar,
+)
+
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 
 class Graph(GraphCore):
-    """
-    Graph class is a subclass of GraphCore that stores graph representations
-    and quantities like the adjacency matrix, graph Laplacian, and eigenvectors
-    and eigenvalues of the graph Laplacian. All computations are performed by
-    the GraphCore methods.
+    """Graph representation with spectral properties and clustering.
 
-    Methods:
-    - adjacency(): Compute and return the adjacency matrix. Cached property.
-    - graph_laplacian(): Compute and return the graph Laplacian. Cached property.
-    - laplacian_eig(): Return the eigenvalues and eigenvectors of the graph Laplacian. Cached property.
-    - cluster(): Perform spectral clustering of the graph nodes and return the indices of the centroids
-        of the clusters and the labels of the nodes.
+    This class extends GraphCore to store graph representations and
+    quantities like the adjacency matrix, graph Laplacian, and
+    eigenvectors and eigenvalues of the graph Laplacian.
+
+    Methods
+    -------
+    adjacency : cached_property
+        Compute and return the adjacency matrix.
+    graph_laplacian : cached_property
+        Compute and return the graph Laplacian.
+    laplacian_eig()
+        Return eigenvalues and eigenvectors of graph Laplacian.
+    cluster(n, new_clustering)
+        Perform spectral clustering and return cluster info.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -44,7 +63,13 @@ class Graph(GraphCore):
         return self.compute_graph_laplacian(self.adjacency)
 
     def laplacian_eig(self) -> tuple[np.ndarray, np.ndarray]:
-        """Return the eigenvalues and eigenvectors of the graph Laplacian."""
+        """Return eigenvalues and eigenvectors of graph Laplacian.
+
+        Returns
+        -------
+        tuple of np.ndarray
+            Eigenvalues and eigenvectors of the graph Laplacian.
+        """
         if self.eigvals is None or self.eigvecs is None:
             self.eigvals, self.eigvecs = ordered_eig(self.graph_laplacian)
         return self.eigvals, self.eigvecs
@@ -52,20 +77,24 @@ class Graph(GraphCore):
     def cluster(
         self, n: int, new_clustering: bool = False
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Perform spectral clustering of the graph nodes and return the indices of the
-        centroids of the clusters and the labels of the nodes.
+        """Perform spectral clustering of graph nodes.
 
-        Parameters:
-        - n (int): Number of clusters.
-        - new_clustering (bool): If True, the clusters are always recomputed.
+        Parameters
+        ----------
+        n : int
+            Number of clusters.
+        new_clustering : bool, optional
+            If True, clusters are always recomputed. Default is False.
 
-        Returns:
-        - tuple: Indices of the centroids of the clusters, labels of the data points.
+        Returns
+        -------
+        tuple of np.ndarray
+            Indices of cluster centroids and labels of data points.
         """
         if n <= 0 or n >= self.n_nodes:
             raise ValueError(
-                f"Invalid number of clusters: {n}. Must be positive and less than {self.n_nodes}."
+                f"Invalid number of clusters: {n}. "
+                f"Must be positive and less than {self.n_nodes}."
             )
 
         if self._should_return_previous_clusters(n, new_clustering):
@@ -78,23 +107,27 @@ class Graph(GraphCore):
 
         return self.inds_centroids, self.labels
 
-    def _should_return_previous_clusters(self, n: int, new_clustering: bool) -> bool:
-        """
-        Determine if the previous clusters should be returned or if a new clustering needs to be performed.
+    def _should_return_previous_clusters(
+        self, n: int, new_clustering: bool
+    ) -> bool:
+        """Determine if previous clusters should be returned.
+
+        Returns True if clustering already done with same parameters.
         """
         if not self._is_graph_clustered:
             return False
 
         if n == self.n_clusters and not new_clustering:
-            print(
-                "Spectral clustering was already performed with the same number of clusters. "
-                "Returning previous clusters."
+            logger.info(
+                "Spectral clustering was already performed with the "
+                "same number of clusters. Returning previous clusters."
             )
             return True
 
         if n != self.n_clusters:
-            print(
-                "UserWarning: Clusters have already been computed with a different 'n', recomputing..."
+            logger.warning(
+                "Clusters have already been computed with a different "
+                "'n' recomputing..."
             )
 
         return False
@@ -107,26 +140,44 @@ class Graph(GraphCore):
 
 
 class MultiFidelityModel:
+    """Multi-fidelity modeling using spectral methods (specMF).
+
+    Parameters
+    ----------
+    sigma : float, optional
+        Noise level of high-fidelity data. Default is 1e-2.
+    beta : int, optional
+        Regularization exponent controlling smoothness of correction.
+        Higher values lead to smoother solutions. Default is 2.
+    kappa : float, optional
+        Regularization strength controlling weight of prior vs
+        likelihood. Default is 1e-3.
+    omega : float, optional
+        Alternative to kappa for direct regularization control.
+    method : str, optional
+        SpecMF variation: 'full' or 'trunc'. Default is 'full'.
+    spectrum_cutoff : int, optional
+        Number of eigenvectors used if method='trunc'.
+    tau : float, optional
+        Spectral gap parameter for regularization.
+
+    Methods
+    -------
+    transform(g_LF, x_HF, inds_train)
+        Compute multi-fidelity data from low-fidelity graph.
+    fit_transform(g_LF, x_HF, inds_train, ...)
+        Optimize hyperparameters and compute multi-fidelity data.
+    summary(params_to_print)
+        Print the model configuration.
     """
-    MultiFidelityModel class performs multi-fidelity modeling using specMF method.
 
-    Parameters:
-    - sigma (float): Noise level of high-fidelity data. Default is 1e-2.
-    - beta (int): Regularization exponent. Controls the smoothness of the correction applied to the low-fidelity data
-        to obtain the multi-fidelity data. Higher values lead to smoother solutions. Default is 2.
-    - kappa (float): Regularization strength. Controls the weight of the prior with respect to the likelihood in the
-        Bayesian update used to compute the multi-fidelity data. Default is 1e-3.
-    - method (str): SpecMF variation to computing multi-fidelity data. Can be 'full' or 'trunc'. Default is 'full'.
-    - spectrum_cutoff (bool): Number of eigenvectors used if method is 'trunc'.
-
-    Methods:
-    - transform(): Compute multi-fidelity data from low-fidelity graph.
-    - fit_transform(): Fit omega and return the multi-fidelity data.
-    - summary(): Print the model configuration.
-    """
-
+    # Numerical constants
     REG_EPS = 1e-8
-    _contained_params = [
+    # Number of eigenvalues for spectral gap computation
+    DEFAULT_SPECTRAL_GAP_EIGVALS = 50
+
+    # Configuration constants
+    _contained_params = [  # noqa: RUF012
         "sigma",
         "beta",
         "kappa",
@@ -141,10 +192,10 @@ class MultiFidelityModel:
         sigma: float = 1e-2,
         beta: int = 2,
         kappa: float = 1e-3,
-        omega: float = None,
+        omega: float | None = None,
         method: str = "full",
-        spectrum_cutoff: int = None,
-        tau: float = None,
+        spectrum_cutoff: int | None = None,
+        tau: float | None = None,
     ) -> None:
         self.sigma = sigma
         self.beta = beta
@@ -163,27 +214,46 @@ class MultiFidelityModel:
         self,
         g_LF: Graph,
         x_HF: np.ndarray,
-        inds_train: list,
-    ) -> tuple[np.ndarray, np.ndarray]:
+        inds_train: list[int],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Takes low-fidelity graph and high-fidelity data and returns multi-fidelity data.
+        Compute multi-fidelity data from low-fidelity graph and
+        high-fidelity data.
 
-        Parameters:
-        - g_LF (Graph): The low-fidelity graph.
-        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
-        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
-            in x_HF and the low-fidelity data contained in g_LF.nodes. That is, x_HF[i] corresponds to
-            g_LF.nodes[inds_train[i]].
+        Parameters
+        ----------
+        g_LF : Graph
+            The low-fidelity graph with nodes of shape
+            (n_samples_LF, n_features).
+        x_HF : np.ndarray
+            The high-fidelity data of shape (n_samples_HF, n_features).
+        inds_train : List[int]
+            Indices providing a one-to-one mapping between high-fidelity
+            samples in x_HF and low-fidelity nodes in g_LF.nodes.
+            That is, x_HF[i] corresponds to g_LF.nodes[inds_train[i]].
 
-        Returns:
-        - tuple: The computed multi-fidelity data and the uncertainty estimates.
+        Returns
+        -------
+        x_MF : np.ndarray
+            Multi-fidelity data of shape (n_samples_LF, n_features).
+        C_phi : np.ndarray
+            Covariance matrix of the multi-fidelity estimates.
+        dPhi : np.ndarray
+            Standard deviation of the multi-fidelity estimates.
         """
-        assert g_LF.nodes.shape[1] == x_HF.shape[1], "Dimension mismatch."
+        # Validate inputs
+        if not isinstance(g_LF, Graph):
+            raise TypeError(f"Expected Graph, got {type(g_LF)}")
+        validate_array_shape(x_HF, 2, "x_HF")
+        validate_array_compatibility(
+            g_LF.nodes, x_HF, axis=1, name1="g_LF.nodes", name2="x_HF"
+        )
 
         if len(inds_train) != x_HF.shape[0]:
             raise ValueError(
-                f"Number of high-fidelity data points does not match the number of indices. "
-                f"Got {x_HF.shape[0]} high-fidelity points and {len(inds_train)} indices."
+                f"Number of high-fidelity data points does not match "
+                f"the number of indices. Got {x_HF.shape[0]} "
+                f"high-fidelity points and {len(inds_train)} indices."
             )
 
         if self.tau is None:
@@ -202,7 +272,7 @@ class MultiFidelityModel:
         self,
         g_LF: Graph,
         x_HF: np.ndarray,
-        inds_train: list = None,
+        inds_train: list[int] | None = None,
         r: float = 3.0,
         maxiter: int = 10,
         step_size: float = 1.0,
@@ -210,49 +280,78 @@ class MultiFidelityModel:
         ftol: float = 1e-6,
         gtol: float = 1e-8,
         verbose: bool = False,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[float], list[float]]:
         """
-        Find the hyperparameter kappa such that the ratio between the mean uncertainty of the multi-fidelity
-        estimates and the noise level of the high-fidelity data is equal to a specified value.
-        Then, return the multi-fidelity data.
+        Optimize hyperparameter kappa and compute multi-fidelity data.
 
-        Note:
-            Loss function: (mean(var_mf) - * r * noise_hf)^2
-        Note:
-            Search of kappa is performed in log-space.
+        This method finds the optimal kappa value such that the ratio between
+        mean multi-fidelity uncertainty and high-fidelity noise matches the
+        specified target ratio r.
+        The optimization is performed in log-space using gradient descent.
 
-        Parameters:
-        - g_LF (Graph): The low-fidelity graph.
-        - x_HF (np.ndarray): The high-fidelity data (N-samples_HF, n_features).
-        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
-            in x_HF and the low-fidelity data contained in g_LF.nodes.
-        - r (float): The ratio between the mean multi-fidelity uncertainty and the high-fidelity noise level.
-        - maxiter (int): Maximum number of iterations.
-        - step_size (float): Initial step size for the optimization.
-        - step_decay_rate (float): Rate at which the step size decays.
-        - ftol (float): Tolerance for the loss function. Optimization stops when the loss is below this value.
-        - gtol (float): Tolerance for the gradient. Optimization stops when the gradient is below this value.
-        - verbose (bool): If True, print the loss and gradient at each iteration.
+        Parameters
+        ----------
+        g_LF : Graph
+            The low-fidelity graph with nodes of shape
+            (n_samples_LF, n_features).
+        x_HF : np.ndarray
+            The high-fidelity data of shape (n_samples_HF, n_features).
+        inds_train : Optional[List[int]]
+            Indices providing a one-to-one mapping between high-fidelity
+            samples in x_HF and low-fidelity nodes in g_LF.nodes.
+        r : float, default=3.0
+            Target ratio between mean multi-fidelity uncertainty and
+            high-fidelity noise level.
+        maxiter : int, default=10
+            Maximum number of optimization iterations.
+        step_size : float, default=1.0
+            Initial step size for gradient descent.
+        step_decay_rate : float, default=0.999
+            Multiplicative decay rate for the step size at each iteration.
+        ftol : float, default=1e-6
+            Loss function tolerance. Optimization stops when loss < ftol.
+        gtol : float, default=1e-8
+            Gradient tolerance. Optimization stops when |gradient| < gtol.
+        verbose : bool, default=False
+            If True, log optimization progress at each iteration.
 
-        Returns:
-        - tuple: The computed multi-fidelity data.
-        - list: The loss history.
-        - list: The kappa history.
+        Returns
+        -------
+        x_MF : np.ndarray
+            Multi-fidelity data of shape (n_samples_LF, n_features).
+        C : np.ndarray
+            Covariance matrix of the multi-fidelity estimates.
+        dPhi : np.ndarray
+            Standard deviation of the multi-fidelity estimates.
+        loss_history : List[float]
+            Loss value at each iteration.
+        kappa_history : List[float]
+            Kappa value at each iteration.
+
+        Notes
+        -----
+        The loss function is: (mean(dPhi) - r * sigma)^2
+        Optimization is performed in log(kappa) space for better numerical
+        stability.
         """
 
         if self._is_fit:
-            print(
-                "Warning: Model has already been fitted. "
+            logger.warning(
+                "Model has already been fitted. "
                 "Fitting will continue from the last state. "
-                "To start a new fitting, reset the 'kappa' parameter, or create a new instance of the model."
+                "To start a new fitting, reset the 'kappa' parameter, "
+                "or create a new instance of the model."
             )
 
         if self.kappa is None:
-            raise ValueError("Initial value for 'kappa' must be provided for fitting.")
+            raise ValueError(
+                "Initial value for 'kappa' must be provided for fitting."
+            )
 
         if self.omega is not None:
             raise ValueError(
-                "Parameter 'omega' is not None; fitting would override the current value of 'omega'. "
+                "Parameter 'omega' is not None; fitting would "
+                "override the current value of 'omega'. "
                 "Reset 'omega' to None to use the fitting method."
             )
 
@@ -265,14 +364,13 @@ class MultiFidelityModel:
                 g_LF.graph_laplacian
             )
 
-        # Iniitialize log(kappa)
+        # Initialize log(kappa)
         log_kappa = np.log(self.kappa)
 
         loss_history = []
         kappa_history = []
 
         for it in range(maxiter):
-
             # Update kappa and reset omega
             self.kappa = np.exp(log_kappa)
             self.omega = None
@@ -289,8 +387,9 @@ class MultiFidelityModel:
             kappa_history.append(self.kappa)
 
             if verbose:
-                print(
-                    f"Iteration: {it + 1}, Loss: {loss}, Gradient: {grad}, Kappa: {self.kappa}"
+                logger.info(
+                    f"Iteration: {it + 1}, Loss: {loss}, "
+                    f"Gradient: {grad}, Kappa: {self.kappa}"
                 )
 
             if it > 0 and (loss < ftol or abs(grad) < gtol):
@@ -301,18 +400,19 @@ class MultiFidelityModel:
             step_size *= step_decay_rate
 
         if verbose:
-            print(f"\n---- Completed after {it + 1} iterations.")
-            print(f"Final Loss: {loss}")
+            logger.info(f"---- Completed after {it + 1} iterations.")
+            logger.info(f"Final Loss: {loss}")
 
         self._is_fit = True
         return x_MF, C, dPhi, loss_history, kappa_history
 
-    def summary(self, params_to_print: list = None) -> None:
-        """
-        Print the model configuration.
+    def summary(self, params_to_print: list[str] | None = None) -> None:
+        """Print the model configuration.
 
-        Parameters:
-        - params_to_print (list): List of parameters to print. Default is all parameters.
+        Parameters
+        ----------
+        params_to_print : list of str, optional
+            List of parameters to print. Default is all parameters.
         """
         if params_to_print is None:
             params_to_print = self._contained_params
@@ -330,79 +430,164 @@ class MultiFidelityModel:
 
         print(divider)
 
+    def _compute_correction_residual(
+        self,
+        x_LF: np.ndarray,
+        x_HF: np.ndarray,
+        inds_train: list[int],
+    ) -> np.ndarray:
+        """Compute correction residual (HF - LF at training points).
+
+        Parameters
+        ----------
+        x_LF : np.ndarray
+            Low-fidelity data.
+        x_HF : np.ndarray
+            High-fidelity data.
+        inds_train : list of int
+            Training indices.
+
+        Returns
+        -------
+        np.ndarray
+            Correction residual.
+        """
+        return x_HF - x_LF[inds_train, :]
+
+    def _create_selection_matrix(
+        self,
+        n_total: int,
+        n_selected: int,
+        inds_selected: list[int],
+    ) -> np.ndarray:
+        """Create a selection matrix that picks selected indices.
+
+        Parameters
+        ----------
+        n_total : int
+            Total number of samples.
+        n_selected : int
+            Number of selected samples.
+        inds_selected : list of int
+            Indices of selected samples.
+
+        Returns
+        -------
+        np.ndarray
+            Selection matrix of shape (n_selected, n_total).
+        """
+        P = np.zeros((n_selected, n_total))
+        P[np.arange(n_selected), inds_selected] = 1
+        return P
+
     def _compute_specmf_data(
-        self, g_LF: Graph, x_HF: np.ndarray, inds_train: list
-    ) -> tuple[np.ndarray, np.ndarray]:
+        self,
+        g_LF: Graph,
+        x_HF: np.ndarray,
+        inds_train: list[int],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Compute multi-fidelity data using standard specMF method.
 
-        Parameters:
-        - g_LF (Graph): The low-fidelity graph with nodes of shape (n_samples_LF, n_features).
-        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
-        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
+        Parameters
+        ----------
+        g_LF : Graph
+            Low-fidelity graph with nodes (n_samples_LF, n_features).
+        x_HF : np.ndarray
+            High-fidelity data of shape (n_samples_HF, n_features).
+        inds_train : list of int
+            Indices providing one-to-one mapping HF to LF.
 
-        Returns:
-        - np.ndarray: Multi-fidelity data (n_samples_LF, n_features).
-        - np.ndarray: Covariance matrix of the multi-fidelity data.
-        - np.ndarray: Standard deviation of the multi-fidelity estimates.
+        Returns
+        -------
+        x_MF : np.ndarray
+            Multi-fidelity data (n_samples_LF, n_features).
+        C_phi : np.ndarray
+            Covariance matrix.
+        dPhi : np.ndarray
+            Standard deviation of estimates.
         """
         x_LF = g_LF.nodes
-
         n_LF, n_HF = x_LF.shape[0], len(inds_train)
-        Phi_hat = x_HF - x_LF[inds_train, :]
-        P_N = np.zeros((n_HF, n_LF))
-        P_N[np.arange(n_HF), inds_train] = 1
 
+        # Compute correction residual
+        Phi_hat = self._compute_correction_residual(x_LF, x_HF, inds_train)
+
+        # Create selection matrix
+        P_N = self._create_selection_matrix(n_LF, n_HF, inds_train)
+
+        # Compute or retrieve regularized Laplacian
         if self.regularized_laplacian is None:
-            self.regularized_laplacian = self._compute_regularized_laplacian(
-                g_LF.graph_laplacian
-            )
+            L_reg = self._compute_regularized_laplacian(g_LF.graph_laplacian)
+            self.regularized_laplacian = L_reg
 
-        B = (1 / self.sigma**2) * (
-            P_N.T @ P_N
-        ) + self.omega * self.regularized_laplacian
-
+        # Construct and solve the system
+        B = (1 / self.sigma**2) * (P_N.T @ P_N)
+        B = B + self.omega * self.regularized_laplacian
         C_phi = solve(B, np.eye(n_LF))
         Phi_mean = (1 / self.sigma**2) * C_phi @ P_N.T @ Phi_hat
 
+        # Compute multi-fidelity estimates
         x_MF = x_LF + Phi_mean
         dPhi = np.sqrt(np.diag(C_phi) + self.REG_EPS)
 
         return x_MF, C_phi, dPhi
 
     def _compute_specmf_data_trunc(
-        self, g_LF: Graph, x_HF: np.ndarray, inds_train: list
-    ) -> tuple[np.ndarray, np.ndarray]:
+        self,
+        g_LF: Graph,
+        x_HF: np.ndarray,
+        inds_train: list[int],
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Compute multi-fidelity data using truncated specMF method.
 
-        Parameters:
-        - g_LF (Graph): The low-fidelity graph with nodes of shape (n_samples_LF, n_features).
-        - x_HF (np.ndarray): The high-fidelity data (n_samples_HF, n_features).
-        - inds_train (list): Indices that provide a one-to-one map between the high-fidelity contained
+        The truncated method expresses multi-fidelity corrections as a
+        linear combination of low-lying eigenvectors of the graph
+        Laplacian, reducing computational cost.
 
-        Returns:
-        - np.ndarray: Multi-fidelity data (n_samples_LF, n_features).
-        - np.ndarray: Covariance matrix of the multi-fidelity data.
-        - np.ndarray: Standard deviation of the multi-fidelity estimates.
+        Parameters
+        ----------
+        g_LF : Graph
+            Low-fidelity graph with nodes (n_samples_LF, n_features).
+        x_HF : np.ndarray
+            High-fidelity data of shape (n_samples_HF, n_features).
+        inds_train : list of int
+            Indices providing one-to-one mapping HF to LF.
 
-        Note:
-            The truncated method expresses the multi-fidelity corrections as a linear combination of the
-            low-lying eigenvectors of the graph Laplacian. The number of eigenvectors used is controlled
-            by the parameter 'spectrum_cutoff'.
+        Returns
+        -------
+        x_MF : np.ndarray
+            Multi-fidelity data (n_samples_LF, n_features).
+        C_phi : np.ndarray
+            Covariance matrix.
+        dPhi : np.ndarray
+            Standard deviation of estimates.
+
+        Notes
+        -----
+        Number of eigenvectors used controlled by spectrum_cutoff.
         """
         x_LF = g_LF.nodes
         eigvals, eigvecs = g_LF.laplacian_eig()
 
+        # Truncate to low-lying eigenvectors
         Psi = eigvecs[:, : self.spectrum_cutoff]
         Psi_N = Psi[inds_train, :]
-        Phi_hat = x_HF - x_LF[inds_train, :]
 
-        eigvals_reg = (np.abs(eigvals[: self.spectrum_cutoff]) + self.tau) ** self.beta
-        B = (1 / self.sigma**2) * (Psi_N.T @ Psi_N) + self.omega * np.diag(eigvals_reg)
+        # Compute correction residual
+        Phi_hat = self._compute_correction_residual(x_LF, x_HF, inds_train)
 
+        # Regularize truncated eigenvalues
+        eigvals_trunc = np.abs(eigvals[: self.spectrum_cutoff])
+        eigvals_reg = (eigvals_trunc + self.tau) ** self.beta
+
+        # Construct and solve reduced system
+        B = (1 / self.sigma**2) * (Psi_N.T @ Psi_N)
+        B = B + self.omega * np.diag(eigvals_reg)
         C_a = solve(B, np.eye(self.spectrum_cutoff))
         A = (1 / self.sigma**2) * C_a @ Psi_N.T @ Phi_hat
-        Phi_mean = Psi @ A
 
+        # Project back to full space
+        Phi_mean = Psi @ A
         x_MF = x_LF + Phi_mean
         C_phi = Psi @ C_a @ Psi.T
         dPhi = np.sqrt(np.diag(C_phi) + self.REG_EPS)
@@ -412,77 +597,119 @@ class MultiFidelityModel:
     def _compute_spectral_gap(self, eigvals: np.ndarray) -> float:
         """Compute spectral gap for tau estimation.
 
-        Parameters:
-        - eigvals (np.ndarray): Eigenvalues of the graph Laplacian.
+        Parameters
+        ----------
+        eigvals : np.ndarray
+            Eigenvalues of the graph Laplacian.
 
-        Returns:
-        - float: The eigenvalue corresponding to the highest curvature of the spectrum in log-scale.
+        Returns
+        -------
+        float
+            Eigenvalue at highest curvature of spectrum in log-scale.
         """
-        eigvals_ = np.abs(eigvals[:50])
+        n_eigs = self.DEFAULT_SPECTRAL_GAP_EIGVALS
+        eigvals_ = np.abs(eigvals[:n_eigs])
         log_eigvals = np.log10(eigvals_)
-        log_curvature = log_eigvals[:-2] + log_eigvals[2:] - 2 * log_eigvals[1:-1]
+        log_curvature = (
+            log_eigvals[:-2] + log_eigvals[2:] - 2 * log_eigvals[1:-1]
+        )
         return eigvals[np.argmin(log_curvature) + 1]
 
-    def _compute_regularized_laplacian(self, L: np.ndarray):
-        """Compute the regularized graph Laplacian."""
-        return np.linalg.matrix_power(L + self.tau * np.eye(L.shape[0]), self.beta)
+    def _compute_regularized_laplacian(self, L: np.ndarray) -> np.ndarray:
+        """Compute the regularized graph Laplacian.
 
-    def _compute_loss(self, dPhi: np.ndarray, r: float):
+        Parameters
+        ----------
+        L : np.ndarray
+            Graph Laplacian matrix.
+
+        Returns
+        -------
+        np.ndarray
+            Regularized Laplacian matrix.
         """
-        Compute loss function. This is equal to squared difference between the mean multi-fidelity
+        L_reg = L + self.tau * np.eye(L.shape[0])
+        return np.linalg.matrix_power(L_reg, self.beta)
+
+    def _compute_loss(self, dPhi: np.ndarray, r: float) -> float:
+        """Compute loss function for hyperparameter optimization.
+
+        Loss is squared difference between mean multi-fidelity
         uncertainty and high-fidelity noise.
 
-        Parameters:
-        - dPhi (np.ndarray): Multi-fidelity estimates uncertainty.
-        - r (float): The ratio of the mean multi-fidelity uncertainty to the high-fidelity noise level.
+        Parameters
+        ----------
+        dPhi : np.ndarray
+            Multi-fidelity estimates uncertainty.
+        r : float
+            Target ratio of mean MF uncertainty to HF noise level.
+
+        Returns
+        -------
+        float
+            The loss value.
         """
         return (np.mean(dPhi) - r * self.sigma) ** 2
 
-    def _compute_gradient(self, dPhi: np.ndarray, C: np.ndarray, r: float):
-        """
-        Compute the gradient of the loss with respect to log(kappa).
+    def _compute_gradient(
+        self, dPhi: np.ndarray, C: np.ndarray, r: float
+    ) -> float:
+        """Compute gradient of loss with respect to log(kappa).
 
-        Parameters:
-        - dPhi (np.ndarray): Multi-fidelity estimates uncertainty.
-        - C (np.ndarray): Multi-fidelity estimates covariance matrix.
-        - r (float): The ratio of the mean multi-fidelity uncertainty to the high-fidelity noise level.
+        Parameters
+        ----------
+        dPhi : np.ndarray
+            Multi-fidelity estimates uncertainty.
+        C : np.ndarray
+            Multi-fidelity estimates covariance matrix.
+        r : float
+            Target ratio of mean MF uncertainty to HF noise level.
+
+        Returns
+        -------
+        float
+            The gradient value.
         """
-        dloss_dC = (1 / dPhi.size) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
-        dC_dkappa = -(1 / self.tau**self.beta) * np.sum(
-            np.multiply(C.T, self.regularized_laplacian @ C), axis=0
-        )  # NOTE: np.sum(np.multiply(A.T, B), axis=0) == np.diag(A @ B)
+        dloss_dC = (
+            (1 / dPhi.size) * (np.mean(dPhi) - r * self.sigma) * (1 / dPhi)
+        )
+        dC_dkappa = -(1 / self.tau**self.beta) * np.einsum(
+            "ij,ij->j", C, self.regularized_laplacian @ C
+        )
         dkappa_dlogkappa = self.kappa
-        return np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
+        gradient = np.sum(dloss_dC * dC_dkappa) * dkappa_dlogkappa
+        return gradient
 
-    def _check_config(self):
-        if self.method not in ["full", "trunc"]:
-            raise ValueError(
-                f"Invalid method. Expected 'full' or 'trunc', got {self.method}."
-            )
+    def _check_config(self) -> None:
+        """Validate model configuration parameters."""
+        validate_method_choice(self.method, ["full", "trunc"], "method")
+
         if self.method == "trunc" and self.spectrum_cutoff is None:
             raise ValueError(
-                "With method 'trunc', parameter 'spectrum-cutoff' must be provided."
+                "With method 'trunc', parameter 'spectrum_cutoff' "
+                "must be provided."
             )
         if self.method == "full" and self.spectrum_cutoff is not None:
-            print(
-                "Warning: When method is 'full' the parameter 'spectrum_cutoff' is ignored."
+            logger.warning(
+                "When method is 'full' the parameter "
+                "'spectrum_cutoff' is ignored."
             )
-        if self.sigma is None or self.sigma <= 0:
-            raise ValueError(f"Parameter 'sigma' must be positive, got {self.sigma}.")
-        if self.beta is None or self.beta <= 0:
-            raise ValueError(f"Parameter 'beta' must be positive, got {self.beta}.")
-        if self.spectrum_cutoff is not None and self.spectrum_cutoff <= 0:
-            raise ValueError(
-                f"Parameter 'spectrum_cutoff' must be positive, got {self.spectrum_cutoff}."
-            )
+
+        validate_positive_scalar(self.sigma, "sigma")
+        validate_positive_scalar(self.beta, "beta")
+
+        if self.spectrum_cutoff is not None:
+            validate_positive_scalar(self.spectrum_cutoff, "spectrum_cutoff")
+
         if self.omega is not None:
-            if self.omega <= 0:
-                raise ValueError(
-                    f"Parameter 'omega' must be positive, got {self.omega}."
-                )
+            validate_positive_scalar(self.omega, "omega")
             if self.kappa is not None:
-                print("Warning: Parameter 'kappa' is ignored when 'omega' is provided.")
-        if self.omega is None and (self.kappa is None or self.kappa <= 0):
-            raise ValueError(f"Parameter 'kappa' must be positive, got {self.kappa}.")
-        if self.tau is not None and self.tau <= 0:
-            raise ValueError(f"Parameter 'tau' must be positive, got {self.tau}.")
+                logger.warning(
+                    "Parameter 'kappa' is ignored when 'omega' is provided."
+                )
+
+        if self.omega is None:
+            validate_positive_scalar(self.kappa, "kappa")
+
+        if self.tau is not None:
+            validate_positive_scalar(self.tau, "tau")

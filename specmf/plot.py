@@ -1,28 +1,54 @@
-import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
-import numpy as np
-from typing import Optional, Callable, Dict
+"""Plotting utilities for multi-fidelity data visualization."""
 
+import logging
+from collections.abc import Callable
+
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.ticker import MaxNLocator
+
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Update matplotlib settings
-plt.rcParams.update(
-    {
-        "text.usetex": True,
-        "font.family": "serif",
-        "font.serif": ["Times"],
-    }
-)
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Times"],
+})
 
 
-# General plotting functions
 def plot_distributions(
     e_LF: np.ndarray,
     e_MF: np.ndarray,
     bins_LF: int = 50,
     bins_MF: int = 50,
-    mask: Optional[np.ndarray] = None,
+    mask: np.ndarray | None = None,
     return_axs: bool = False,
-) -> None:
+) -> tuple[plt.Figure, np.ndarray] | None:
+    """Plot error distributions for LF and MF data.
+
+    Parameters
+    ----------
+    e_LF : np.ndarray
+        Low-fidelity errors.
+    e_MF : np.ndarray
+        Multi-fidelity errors.
+    bins_LF : int, optional
+        Number of bins for LF histogram. Default is 50.
+    bins_MF : int, optional
+        Number of bins for MF histogram. Default is 50.
+    mask : np.ndarray, optional
+        Boolean mask to filter data. Default is None.
+    return_axs : bool, optional
+        Whether to return axes. Default is False.
+
+    Returns
+    -------
+    np.ndarray or None
+        Axes array if return_axs is True, else None.
+    """
     if mask is None:
         mask = np.ones_like(e_LF, dtype=bool)
 
@@ -31,7 +57,11 @@ def plot_distributions(
     )
 
     f, _, _ = axs[0].hist(
-        e_MF[mask], bins=bins_MF, alpha=0.75, zorder=10, label="Multi-Fidelity"
+        e_MF[mask],
+        bins=bins_MF,
+        alpha=0.75,
+        zorder=10,
+        label="Multi-Fidelity",
     )
     axs[0].hist(e_LF[mask], bins=bins_LF, alpha=0.75, label="Low-Fidelity")
     axs[0].grid(True, linewidth=0.5)
@@ -58,12 +88,29 @@ def plot_distributions(
     axs[1].set_xlabel(r"Error [\%]", fontsize=26, labelpad=15)
     plt.tight_layout()
 
-    return axs if return_axs else None
+    return fig, axs if return_axs else None
 
 
-def plot_spectrum(eigvals: np.ndarray, n: int) -> None:
+def plot_spectrum(
+    eigvals: np.ndarray, n: int, return_axs: bool = False
+) -> tuple[plt.Figure, plt.Axes] | None:
+    """Plot eigenvalue spectrum.
+
+    Parameters
+    ----------
+    eigvals : np.ndarray
+        Eigenvalues to plot.
+    n : int
+        Number of eigenvalues to display.
+    """
     fig, ax = plt.subplots(1, 1, figsize=(8, 4))
-    ax.plot(np.arange(1, n + 1), np.abs(eigvals[:n]), "o-", c="k", markersize=5)
+    ax.plot(
+        np.arange(1, n + 1),
+        np.abs(eigvals[:n]),
+        "o-",
+        c="k",
+        markersize=5,
+    )
     ax.set_yscale("log")
     ax.set_xticks(range(1, n + 1, 5))
     ax.tick_params(axis="both", labelsize=14)
@@ -71,10 +118,19 @@ def plot_spectrum(eigvals: np.ndarray, n: int) -> None:
     ax.set_ylabel(r"$\lambda_m$", fontsize=20, rotation=0, labelpad=20)
     ax.grid(True, linestyle="--", linewidth=0.5)
     plt.tight_layout()
+    return fig, ax if return_axs else None
 
 
-def plot_cluster_size_hist(labels: np.ndarray) -> None:
-    """Plot a histogram of cluster sizes."""
+def plot_cluster_size_hist(
+    labels: np.ndarray, return_axs: bool = False
+) -> tuple[plt.Figure, plt.Axes] | None:
+    """Plot a histogram of cluster sizes.
+
+    Parameters
+    ----------
+    labels : np.ndarray
+        Cluster labels for each data point.
+    """
     clus_sizes = np.bincount(labels)
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.hist(np.sort(clus_sizes), bins=20)
@@ -84,15 +140,25 @@ def plot_cluster_size_hist(labels: np.ndarray) -> None:
     ax.tick_params(axis="both", labelsize=12)
     ax.set_title("Cluster size histogram", fontsize=18)
     plt.tight_layout()
+    return fig, ax if return_axs else None
 
 
-def plot_loss_and_kappa(loss_history, kappa_history):
+def plot_loss_and_kappa(
+    loss_history: list[float],
+    kappa_history: list[float],
+    return_axs: bool = False,
+) -> tuple[plt.Figure, plt.Axes, plt.Axes] | None:
+    """Plot loss and kappa histories with dual y-axes.
+
+    Parameters
+    ----------
+    loss_history : list of float
+        Loss values at each iteration.
+    kappa_history : list of float
+        Kappa values at each iteration.
     """
-    Plot loss history and kappa history on the same figure with two y-axes.
-    """
-    assert len(loss_history) == len(
-        kappa_history
-    ), "Loss and kappa histories must have the same length."
+    if len(loss_history) != len(kappa_history):
+        raise ValueError("Loss and kappa histories must have the same length.")
 
     iterations = np.arange(len(loss_history))
 
@@ -109,18 +175,34 @@ def plot_loss_and_kappa(loss_history, kappa_history):
     ax2 = ax1.twinx()
     ax2.plot(iterations, kappa_history, "r-", label=r"$\kappa$")
     ax2.set_yscale("log")
-    ax2.set_ylabel(r"$\kappa$", color="r", rotation=0, labelpad=20, fontsize=16)
+    ax2.set_ylabel(
+        r"$\kappa$", color="r", rotation=0, labelpad=20, fontsize=16
+    )
     ax2.tick_params(axis="y", labelcolor="r")
 
     ax1.grid(True)
     plt.title("Loss and Kappa History")
     plt.show()
+    return fig, ax1, ax2 if return_axs else None
 
 
-# Data plotting functions
-def plot_data(X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs) -> None:
-    """Plot low-fidelity and high-fidelity data based on the dataset name."""
-    plotters: Dict[str, Callable] = {
+def plot_data(
+    X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs
+) -> None:
+    """Plot low-fidelity and high-fidelity data.
+
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data.
+    X_HF : np.ndarray
+        High-fidelity data.
+    dataset_name : str
+        Name of the dataset to determine plot type.
+    **kwargs
+        Additional keyword arguments for plotting functions.
+    """
+    plotters: dict[str, Callable] = {
         "elasticity-displacement": _plot_lf_hf_fields_samples,
         "darcy-flow": _plot_lf_hf_fields_samples,
         "elasticity-traction": _plot_lf_hf_qoi_samples,
@@ -130,8 +212,10 @@ def plot_data(X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs) -
 
     plot_func = plotters.get(dataset_name)
     if plot_func is None:
+        valid_names = list(plotters.keys())
         raise ValueError(
-            f"Invalid dataset name: {dataset_name}. Expected one of {list(plotters.keys())}."
+            f"Invalid dataset name: {dataset_name}. "
+            f"Expected one of {valid_names}."
         )
 
     plot_func(X_LF, X_HF, **kwargs)
@@ -139,7 +223,11 @@ def plot_data(X_LF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs) -
 
 
 def _plot_lf_hf_fields_samples(
-    X_LF: np.ndarray, X_HF: np.ndarray, n_samples: int = 5, levels: int = 10, **kwargs
+    X_LF: np.ndarray,
+    X_HF: np.ndarray,
+    n_samples: int = 5,
+    levels: int = 10,
+    **kwargs,
 ) -> None:
     """Plot field samples for low-fidelity and high-fidelity datasets."""
     n_points, n_dim = X_LF.shape
@@ -151,18 +239,30 @@ def _plot_lf_hf_fields_samples(
         fig.subplots_adjust(wspace=0.15)
 
         titles = ["Low-fidelity", "High-fidelity", "Difference"]
-        for ax, title in zip(axs, titles):
+        for ax, title in zip(axs, titles, strict=False):
             ax.set_title(title, fontsize=20)
 
-        vmin, vmax = np.min([X_LF[j, :], X_HF[j, :]]), np.max([X_LF[j, :], X_HF[j, :]])
+        vmin, vmax = (
+            np.min([X_LF[j, :], X_HF[j, :]]),
+            np.max([X_LF[j, :], X_HF[j, :]]),
+        )
         lf = axs[0].contourf(
-            X_LF[j, :].reshape(n_res, n_res), levels=levels, vmin=vmin, vmax=vmax
+            X_LF[j, :].reshape(n_res, n_res),
+            levels=levels,
+            vmin=vmin,
+            vmax=vmax,
         )
         hf = axs[1].contourf(
-            X_HF[j, :].reshape(n_res, n_res), levels=levels, vmin=vmin, vmax=vmax
+            X_HF[j, :].reshape(n_res, n_res),
+            levels=levels,
+            vmin=vmin,
+            vmax=vmax,
         )
         diff = axs[2].contourf(
-            np.abs(X_HF[j, :].reshape(n_res, n_res) - X_LF[j, :].reshape(n_res, n_res)),
+            np.abs(
+                X_HF[j, :].reshape(n_res, n_res)
+                - X_LF[j, :].reshape(n_res, n_res)
+            ),
             cmap="Reds",
         )
 
@@ -194,24 +294,29 @@ def _plot_lf_hf_curves_samples(
         axs[i].grid(True)
 
 
-def _plot_lf_hf_qoi_samples(X_LF: np.ndarray, X_HF: np.ndarray, **kwargs) -> None:
+def _plot_lf_hf_qoi_samples(
+    X_LF: np.ndarray, X_HF: np.ndarray, **kwargs
+) -> None:
+    """Plot low-fidelity and high-fidelity quantities of interest samples."""
     # Plot clustered dataset and centorids
     fig, axs = plt.subplots(2, 4, figsize=(20, 10))
     fig.subplots_adjust(wspace=0.3)
     n_planes = X_LF.shape[1] - 1
 
     for i in range(n_planes):
-        y_max, y_min = 1.2 * np.max((X_LF[:, i + 1], X_HF[:, i + 1])), 1.2 * np.min(
-            (X_LF[:, i + 1], X_HF[:, i + 1])
+        y_max, y_min = (
+            1.2 * np.max((X_LF[:, i + 1], X_HF[:, i + 1])),
+            1.2 * np.min((X_LF[:, i + 1], X_HF[:, i + 1])),
         )
-        x_max, x_min = 1.2 * np.max((X_LF[:, i], X_HF[:, i])), 1.2 * np.min(
-            (X_LF[:, i], X_HF[:, i])
+        x_max, x_min = (
+            1.2 * np.max((X_LF[:, i], X_HF[:, i])),
+            1.2 * np.min((X_LF[:, i], X_HF[:, i])),
         )
 
         axs[0, i].scatter(X_LF[:, i], X_LF[:, i + 1], s=3)
-        axs[0, i].set_xlabel("$u_{}$".format(i + 1), fontsize=24)
+        axs[0, i].set_xlabel(f"$u_{i + 1}$", fontsize=24)
         axs[0, i].set_ylabel(
-            "$u_{}$".format(i + 2), fontsize=24, rotation=0, labelpad=15
+            f"$u_{i + 2}$", fontsize=24, rotation=0, labelpad=15
         )
         axs[0, i].tick_params(axis="both", labelsize=16)
         axs[0, i].set_xlim((x_min, x_max))
@@ -219,11 +324,11 @@ def _plot_lf_hf_qoi_samples(X_LF: np.ndarray, X_HF: np.ndarray, **kwargs) -> Non
 
         axs[1, i].scatter(X_HF[:, i], X_HF[:, i + 1], s=3, c="r")
         axs[1, i].set_xlabel(
-            "$u_{}$".format(i + 1),
+            f"$u_{i + 1}$",
             fontsize=24,
         )
         axs[1, i].set_ylabel(
-            "$u_{}$".format(i + 2),
+            f"$u_{i + 2}$",
             fontsize=24,
             rotation=0,
             labelpad=15,
@@ -235,7 +340,11 @@ def _plot_lf_hf_qoi_samples(X_LF: np.ndarray, X_HF: np.ndarray, **kwargs) -> Non
 
 # Comparison plotting functions
 def plot_mf_comparison(
-    X_LF: np.ndarray, X_MF: np.ndarray, X_HF: np.ndarray, dataset_name: str, **kwargs
+    X_LF: np.ndarray,
+    X_MF: np.ndarray,
+    X_HF: np.ndarray,
+    dataset_name: str,
+    **kwargs,
 ) -> None:
     """Plot multi-fidelity comparisons based on the dataset name."""
     plotters = {
@@ -249,7 +358,8 @@ def plot_mf_comparison(
     plot_func = plotters.get(dataset_name)
     if plot_func is None:
         raise ValueError(
-            f"Invalid dataset name: {dataset_name}. Expected one of {list(plotters.keys())}."
+            f"Invalid dataset name: {dataset_name}. "
+            f"Expected one of {list(plotters.keys())}."
         )
 
     plot_func(X_LF, X_MF, X_HF, **kwargs)
@@ -260,35 +370,45 @@ def _plot_mf_comparison_field(
     X_LF: np.ndarray,
     X_MF: np.ndarray,
     X_HF: np.ndarray,
-    samples: list,
-    input_field: np.ndarray = None,  # Permeability data, optional
-    titles: list = None,  # Titles for subplots, optional
+    samples: list[int],
+    input_field: np.ndarray | None = None,
+    titles: list[str] | None = None,
     levels: int = 10,
     cmap_diff: str = "Reds",
     cmap_inp: str = "Blues",
     **kwargs,
 ) -> None:
-    """
-    Generalized function to plot multi-fidelity field comparisons with optional permeability data.
+    """Plot multi-fidelity field comparisons.
 
-    Parameters:
-    - X_LF: Low-fidelity data (2D array).
-    - X_MF: Multi-fidelity data (2D array).
-    - X_HF: High-fidelity data (2D array).
-    - samples: List of samples to plot. If None, 5 random samples are chosen.
-    - input_field: Optional permeability data (3D array).
-    - titles: Optional list of titles for subplots.
-    - n_samples: Number of samples to plot (default is 4).
-    - levels: Number of contour levels (default is 10).
-    - cmap_diff: Colormap for error plots (default is "Reds").
-    - cmap_inp: Colormap for permeability plots (default is "Blues").
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data (2D array).
+    X_MF : np.ndarray
+        Multi-fidelity data (2D array).
+    X_HF : np.ndarray
+        High-fidelity data (2D array).
+    samples : list of int
+        List of samples to plot. If None, 5 random chosen.
+    input_field : np.ndarray, optional
+        Optional input field data (e.g., permeability, 3D array).
+    titles : list of str, optional
+        Optional list of titles for subplots.
+    levels : int, optional
+        Number of contour levels. Default is 10.
+    cmap_diff : str, optional
+        Colormap for error plots. Default is "Reds".
+    cmap_inp : str, optional
+        Colormap for input field plots. Default is "Blues".
+    **kwargs
+        Additional keyword arguments.
     """
 
     if samples is None:
         samples = np.random.choice(X_LF.shape[0], 5, replace=False)
 
     n_samples = len(samples)
-    n_points, n_dim = X_LF.shape
+    _, n_dim = X_LF.shape
     n_res = int(np.sqrt(n_dim))
 
     # Set default titles if none provided
@@ -313,7 +433,9 @@ def _plot_mf_comparison_field(
     n_cols = len(titles)
 
     # Create the figure and axes
-    fig, axs = plt.subplots(n_samples, n_cols, figsize=(5 * n_cols, 4.25 * n_samples))
+    fig, axs = plt.subplots(
+        n_samples, n_cols, figsize=(5 * n_cols, 4.25 * n_samples)
+    )
     fig.subplots_adjust(wspace=0.1)
 
     # Set subplot titles
@@ -333,7 +455,10 @@ def _plot_mf_comparison_field(
             )
 
         vmin, vmax = np.min([X_LF[j], X_HF[j]]), np.max([X_LF[j], X_HF[j]])
-        vmax_diff = np.max([np.abs(X_HF[j] - X_LF[j]), np.abs(X_MF[j] - X_LF[j])])
+        vmax_diff = np.max([
+            np.abs(X_HF[j] - X_LF[j]),
+            np.abs(X_MF[j] - X_LF[j]),
+        ])
 
         # Plot low-fidelity, multi-fidelity, and error data
         axs[i, -4].contourf(
@@ -383,7 +508,7 @@ def _plot_mf_comparison_qoi(
     X_LF: np.ndarray,
     X_MF: np.ndarray,
     X_HF: np.ndarray,
-    inds_centroids: list,
+    inds_centroids: list[int],
     **kwargs,
 ) -> None:
     """Plot multi-fidelity comparison for set of quantities of interest."""
@@ -395,7 +520,7 @@ def _plot_mf_comparison_qoi(
         "Multi-Fidelity",
         "High-Fidelity",
     ]
-    for ax, title in zip(axs[0], titles):
+    for ax, title in zip(axs[0], titles, strict=False):
         ax.set_title(title, fontsize=24, pad=20)
 
     for i in range(4):
@@ -412,9 +537,9 @@ def _plot_mf_comparison_qoi(
             s=10,
             label="Centroids",
         )
-        axs[i, 0].set_xlabel("$u_{}$".format(i + 1), fontsize=22)
+        axs[i, 0].set_xlabel(f"$u_{i + 1}$", fontsize=22)
         axs[i, 0].set_ylabel(
-            "$u_{}$".format(i + 2), fontsize=22, rotation=0, labelpad=15
+            f"$u_{i + 2}$", fontsize=22, rotation=0, labelpad=15
         )
         axs[i, 0].tick_params(axis="both", labelsize=12)
         axs[i, 0].set_xlim((x_min, x_max))
@@ -422,14 +547,14 @@ def _plot_mf_comparison_qoi(
         axs[i, 0].tick_params(axis="both", labelsize=18)
 
         axs[i, 1].scatter(X_MF[:, i], X_MF[:, i + 1], s=3)
-        axs[i, 1].set_xlabel("$u_{}$".format(i + 1), fontsize=22)
+        axs[i, 1].set_xlabel(f"$u_{i + 1}$", fontsize=22)
         axs[i, 1].tick_params(axis="both", labelsize=12)
         axs[i, 1].set_xlim((x_min, x_max))
         axs[i, 1].set_ylim((y_min, y_max))
         axs[i, 1].tick_params(axis="both", labelsize=18)
 
         axs[i, 2].scatter(X_HF[:, i], X_HF[:, i + 1], c="g", s=3)
-        axs[i, 2].set_xlabel("$u_{}$".format(i + 1), fontsize=22)
+        axs[i, 2].set_xlabel(f"$u_{i + 1}$", fontsize=22)
         axs[i, 2].tick_params(axis="both", labelsize=12)
         axs[i, 2].set_xlim((x_min, x_max))
         axs[i, 2].set_ylim((y_min, y_max))
@@ -451,39 +576,51 @@ def _plot_mf_comparison_curves(
     x_values: np.ndarray,
     xlabel: str,
     ylabel: str,
-    samples: Optional[list] = None,
-    ymax: float = None,
-    ymin: float = None,
+    samples: list[int] | None = None,
+    ymax: float | None = None,
+    ymin: float | None = None,
     legend_loc: str = "lower right",
-    figsize: tuple = (12.5, 8),
+    figsize: tuple[float, float] = (12.5, 8),
     grid: bool = True,
 ) -> None:
-    """
-    General function to plot multi-fidelity comparison curves.
+    """Plot multi-fidelity comparison curves.
 
-    Parameters:
-    - X_LF: Low-fidelity data (2D array).
-    - X_MF: Multi-fidelity data (2D array).
-    - X_HF: High-fidelity data (2D array).
-    - x_values: Array of x-axis values for plotting.
-    - xlabel: Label for the x-axis.
-    - ylabel: Label for the y-axis.
-    - samples: List of samples to plot (default: None).
-    - ymax: Maximum value for the y-axis (default: None).
-    - ymin: Minimum value for the y-axis (default: None).
-    - legend_loc: Location for the legend in the last subplot (default: 'lower right').
-    - figsize: Size of the figure (default: (12.5, 8)).
-    - grid: Whether to show grid (default: True).
+    Parameters
+    ----------
+    X_LF : np.ndarray
+        Low-fidelity data (2D array).
+    X_MF : np.ndarray
+        Multi-fidelity data (2D array).
+    X_HF : np.ndarray
+        High-fidelity data (2D array).
+    x_values : np.ndarray
+        Array of x-axis values for plotting.
+    xlabel : str
+        Label for the x-axis.
+    ylabel : str
+        Label for the y-axis.
+    samples : list of int, optional
+        List of samples to plot. Default is None (random).
+    ymax : float, optional
+        Maximum value for the y-axis. Default is None (auto).
+    ymin : float, optional
+        Minimum value for the y-axis. Default is None (auto).
+    legend_loc : str, optional
+        Location for the legend. Default is 'lower right'.
+    figsize : tuple of float, optional
+        Size of the figure. Default is (12.5, 8).
+    grid : bool, optional
+        Whether to show grid. Default is True.
     """
     if samples is None:
         samples = np.random.choice(X_LF.shape[0], 4, replace=False)
-        print(f"Samples: {samples}")
+        logger.info(f"Selected samples: {samples}")
     else:
         n_samples = len(samples)
         if n_samples != 4:
-            print(
-                f"Warning: Expected 4 samples, but got {n_samples}. "
-                "Only the first 4 samples will be plotted."
+            logger.warning(
+                f"Expected 4 samples, but got {n_samples}. Only the "
+                f"first 4 samples will be plotted."
             )
 
     fig, axs = plt.subplots(2, 2, figsize=figsize)
