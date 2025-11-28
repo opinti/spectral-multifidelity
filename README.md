@@ -68,7 +68,7 @@ hf_train = hf_data[hf_indices]
 
 # Build graph and create model
 graph = Graph(data=lf_data)
-model = MultiFidelityModel(sigma=0.01)
+model = MultiFidelityModel()
 
 # Transform LF data using HF observations
 mf_data, mf_covar, mf_std = model.transform(graph, hf_train, hf_indices)
@@ -94,9 +94,9 @@ data = np.random.rand(100, 3)
 # Initialize graph with custom parameters
 graph = Graph(
     data=data,
-    metric='euclidean',
-    k_adj=10,           # Number of nearest neighbors
-    method='full'       # Use full graph Laplacian
+    metric='euclidean', # Metric to measure sample similarity
+    method='k-nn'       # Options are 'full', for fully connected, or 'k-nn'
+    k_nn=20,            # Number of nearest neighbors if method='k-nn'
 )
 
 # Access graph properties
@@ -115,7 +115,7 @@ The `MultiFidelityModel` class fuses low- and high-fidelity data to produce mult
 Generate example data:
 
 ```python
-from specmf.synthetic import generate_circles_2d
+from data.synthetic import generate_circles_2d
 
 # Generate 2D synthetic data with different noise levels
 lf_data, hf_data = generate_circles_2d(
@@ -200,7 +200,7 @@ plt.tight_layout()
 </p>
 
 
-### 3. High-ffidelity Data Acquisition Strategy
+### 3. High-fidelity Data Acquisition Strategy
 
 Rather than randomly selecting high-fidelity training points, use **spectral clustering** to choose representative samples that cover the data manifold uniformly.
 
@@ -265,7 +265,7 @@ The multi-fidelity data (center, green) closely matches the true high-fidelity d
 
 ### 4. Uncertainty Quantification
 
-Every multi-fidelity estimate includes uncertainty quantification via standard deviation:
+Every multi-fidelity estimate includes an uncertainty metric via its standard deviation. We note how the model's uncertainty increases as we move further away from the training data, and approaches the high-fidelity uncertainty nearby them.
 
 ```python
 # Plot uncertainty distribution
